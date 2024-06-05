@@ -14,31 +14,28 @@ const myString = "9";
 async function main() {
     const camera = new Camera();
 
-    function handleKeyPress(event) {
+    function handleKeyUp(event) {
         switch (event.key) {
             case 'w':
-                camera.moveForward(0.1);
+                camera.moveForward(1);
                 break;
             case 's':
-                camera.moveBackward(0.1);
+                camera.moveBackward(1);
                 break;
             case 'a':
-                camera.moveLeft(0.1);
+                camera.moveLeft(1);
                 break;
             case 'd':
-                camera.moveRight(0.1);
+                camera.moveRight(1);
                 break;
             default:
-            return;
+                //return;
         }
-        //locationValue.set(camera.position);
-        //console.log('camera:', camera.position, camera.direction, camera.up)
-        render();
+        render(); // Render the scene after moving the camera
     }
 
     let before_x = 0;
     let before_y = 0;
-
     let pressed = false;
     
     function handlemousedown(event) {
@@ -68,10 +65,12 @@ async function main() {
         render();
     }
 
-    document.addEventListener('keydown', handleKeyPress);
+    //document.addEventListener('keydown', handleKeyPress);
+    document.addEventListener('keyup', handleKeyUp);
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handlemouseup);
     document.addEventListener('mousedown', handlemousedown);
+    
 
     let depth = 4;
 
