@@ -6,12 +6,74 @@ import { initializeScene } from './src/gui.js';
 import { createBufferData, createBindGroup, changedBindGroup } from './src/createBindGroups.js';
 import { createPipelines } from './src/pipelines.js';
 import { createBuffers } from './src/makeBuffer.js';
-
+import { Camera } from './src/camera.js';
+import * as mat4_2 from "./gl-matrix/mat4.js";
 const myString = "9";
 // const depth = 6;
 
 async function main() {
-    let depth = 6;
+    const camera = new Camera();
+
+    function handleKeyPress(event) {
+        switch (event.key) {
+            case 'w':
+                camera.moveForward(0.1);
+                break;
+            case 's':
+                camera.moveBackward(0.1);
+                break;
+            case 'a':
+                camera.moveLeft(0.1);
+                break;
+            case 'd':
+                camera.moveRight(0.1);
+                break;
+            default:
+            return;
+        }
+        //locationValue.set(camera.position);
+        //console.log('camera:', camera.position, camera.direction, camera.up)
+        render();
+    }
+
+    let before_x = 0;
+    let before_y = 0;
+
+    let pressed = false;
+    
+    function handlemousedown(event) {
+        // before_x = event.clientX;
+        // before_y = event.clientY;
+        // console.log("down");
+        pressed = true;
+    }
+    
+    function handlemouseup(event) {
+        // const movementX = event.clientX - before_x;
+        // const movementY = event.clientY - before_y;
+        // camera.rotate(movementX * -0.005, movementY * -0.005);
+        // console.log("up");
+        // console.log(movementX * 0.005, movementY * 0.005);
+        // render();
+
+        pressed = false;
+    }
+    
+    function handleMouseMove(event) {
+        if (!pressed) {
+            return;
+        }
+        camera.rotate(event.movementX * -0.01, event.movementY * -0.01);
+        // console.log('camera:', camera.position, camera.direction, camera.up)
+        render();
+    }
+
+    document.addEventListener('keydown', handleKeyPress);
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handlemouseup);
+    document.addEventListener('mousedown', handlemousedown);
+
+    let depth = 4;
 
     const { device, context, presentationFormat, canTimestamp } = await initializeWebGPU();
         
@@ -133,7 +195,9 @@ async function main() {
         narray.push(max(2**(depth-1-i),1));
     }
 
-    let nArray = new Uint32Array(narray);
+    //let nArray = new Uint32Array(narray);
+
+    let nArray = new Uint32Array([1,1,1,1,1,1, 1]);
 
     const { pipeline_Face, pipeline_Edge, pipeline_Vertex, pipelines, pipeline2, pipelineAnime } = await createPipelines(device, presentationFormat);
     const { fixedBindGroups, animeBindGroup, changedBindGroups } = await changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer, connectivityStorageBuffers, pipelines, pipeline2, pipelineAnime, myString, settings, depth);
@@ -168,6 +232,13 @@ async function main() {
         mat4.rotateY(matrixValue, settings.rotation[1], matrixValue);
         mat4.rotateZ(matrixValue, settings.rotation[2], matrixValue);
         mat4.scale(matrixValue, settings.scale, matrixValue);
+
+        const matrix = mat4_2.create();
+        mat4_2.multiply(matrix, camera.getViewMatrix(), camera.getProjectionMatrix());
+    
+        mat4.multiply(camera.getProjectionMatrix(), camera.getViewMatrix(), matrixValue);
+
+
 
         // viewValue = new Float32Array([-1*settings.translation.x, -1*settings.translation.y, -1*settings.translation.z, 1]);
         viewValue[0] = settings.translation[0]; viewValue[1] = settings.translation[1]; viewValue[2] = settings.translation[2]; viewValue[3] = 1;
