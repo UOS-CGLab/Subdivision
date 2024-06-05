@@ -7,7 +7,7 @@ def parse_obj(file_path):
         for line in file:
             if line.startswith('v '):
                 parts = line.split()
-                vertex = [float(parts[1]), float(parts[2]), float(parts[3])]
+                vertex = [float(parts[1]), float(parts[2]), float(parts[3]), 0.0]
                 vertices.extend(vertex)
 
     return vertices
