@@ -74,7 +74,7 @@ export class Camera {
         // Update camera position
         vec3.copy(this.position, newPosition);
     
-        //console.log("New Position: ", this.position);
+        console.log("New Position: ", this.position);
     
         // Call update to apply the changes
         this.update();

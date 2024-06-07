@@ -7,80 +7,20 @@ import { createBufferData, createBindGroup, changedBindGroup } from './src/creat
 import { createPipelines } from './src/pipelines.js';
 import { createBuffers } from './src/makeBuffer.js';
 import { Camera } from './src/camera.js';
-import * as mat4_2 from "./gl-matrix/mat4.js";
-const myString = "9";
-// const depth = 6;
+import * as mat4_2 from '../gl-matrix/mat4.js';
+
+const myString = "multifrog";
+const depth = 4;
 
 async function main() {
+    const { canvas, device, context, presentationFormat, canTimestamp } = await initializeWebGPU();
     const camera = new Camera();
 
-    function handleKeyUp(event) {
-        switch (event.key) {
-            case 'w':
-                camera.moveForward(1);
-                break;
-            case 's':
-                camera.moveBackward(1);
-                break;
-            case 'a':
-                camera.moveLeft(1);
-                break;
-            case 'd':
-                camera.moveRight(1);
-                break;
-            default:
-                //return;
-        }
-        render(); // Render the scene after moving the camera
-    }
-
-    let before_x = 0;
-    let before_y = 0;
-    let pressed = false;
-    
-    function handlemousedown(event) {
-        // before_x = event.clientX;
-        // before_y = event.clientY;
-        // console.log("down");
-        pressed = true;
-    }
-    
-    function handlemouseup(event) {
-        // const movementX = event.clientX - before_x;
-        // const movementY = event.clientY - before_y;
-        // camera.rotate(movementX * -0.005, movementY * -0.005);
-        // console.log("up");
-        // console.log(movementX * 0.005, movementY * 0.005);
-        // render();
-
-        pressed = false;
-    }
-    
-    function handleMouseMove(event) {
-        if (!pressed) {
-            return;
-        }
-        camera.rotate(event.movementX * -0.01, event.movementY * -0.01);
-        // console.log('camera:', camera.position, camera.direction, camera.up)
-        render();
-    }
-
-    //document.addEventListener('keydown', handleKeyPress);
-    document.addEventListener('keyup', handleKeyUp);
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handlemouseup);
-    document.addEventListener('mousedown', handlemousedown);
-    
-
-    let depth = 4;
-
-    const { device, context, presentationFormat, canTimestamp } = await initializeWebGPU();
-        
-    const data = await fetch('./topology.json');
-    const data2 = await fetch('./base.json');
+    const data = await fetch('./'+myString+'/topology.json');
+    const data2 = await fetch('./'+myString+'/base.json');
     const obj = await data.json();
     const base = await data2.json();
-
+    
     const uniformBufferSize = (24) * 4;
     const uniformBuffer = device.createBuffer({
         label: 'uniforms',
@@ -94,14 +34,65 @@ async function main() {
     const kMatrixOffset = 0;
     const viewOffset = 16;
     const timeOffset = 20;
+    const wireOffset = 21;
 
     const matrixValue = uniformValues.subarray(kMatrixOffset, kMatrixOffset + 16);
     const viewValue = uniformValues.subarray(viewOffset, viewOffset + 4);
-    const timeValue = uniformValues.subarray(timeOffset, timeOffset + 4);
+    const timeValue = uniformValues.subarray(timeOffset, timeOffset + 1);
+    const wrieValue = uniformValues.subarray(timeOffset, timeOffset + 1);
 
+    // const P = mat4.create();
+    // let fovy = 30;
+    // mat4.perspective(P, toRadian(fovy), 1, 1, 100); 
+    let lastX;
+    let lastY;
+    let angle = [0,0];
+    let dragging = false;
+
+    // canvas.onwheel = function(ev)
+    // {
+    //     fovy += ev.deltaY*0.1;
+    //     fovy = Math.min(170, Math.max(3, fovy));
+    //     mat4.perspective(P, toRadian(fovy), 1, 1, 100); 
+    // }
+    canvas.onmousedown = function(ev) 
+    {
+        let x = ev.clientX, y = ev.clientY;
+        let bb = ev.target.getBoundingClientRect();
+        if (bb.left <= x && x < bb.right && bb.top <= y && y < bb.bottom)
+        {
+            lastX = x;
+            lastY = y;
+            dragging = true;
+        }
+    }
+    canvas.onmouseup = function(ev) { dragging = false; };
+    // const VP = mat4.create();
+    canvas.onmousemove = function(ev)
+    {    
+        let x = ev.clientX;
+        let y = ev.clientY;
+        if(dragging)
+        {
+            console.log("lel");
+            let offset = [x - lastX, y - lastY];
+            if(offset[0] != 0 || offset[1] != 0) // For some reason, the offset becomes zero sometimes...
+            {
+                // mat4.copy(VP, P);
+                // mat4.multiply(VP, VP, V);
+                // let axis = unproject_vector([offset[1], offset[0], 0], VP, 
+                //     gl.getParameter(gl.VIEWPORT));
+                // mat4.rotate(V, V, toRadian(length2(offset)), [axis[0], axis[1], axis[2]]);
+
+                camera.rotate(offset[0] * -0.01, offset[1] * -0.01);
+            }
+        }
+        lastX = x;
+        lastY = y;
+    }
 
     const { connectivitys, OrdinaryPointData } = await createFVertices(myString, depth);
-
+    
     let levels = [];
     let levelsize = 0;
 
@@ -111,7 +102,6 @@ async function main() {
             levelsize += level.size;
             levels.push(level);
         }
-
     
     const Base_Vertex = new Float32Array(base.Base_Vertex);
     const Base_Vertex_Buffer = device.createBuffer({
@@ -122,7 +112,7 @@ async function main() {
 
 
     let connectivityStorageBuffers = [];
-    
+
     for (let i=0; i<depth+1; i++)
     {
         const connectivityStorageBuffer = device.createBuffer({
@@ -232,16 +222,19 @@ async function main() {
         mat4.rotateZ(matrixValue, settings.rotation[2], matrixValue);
         mat4.scale(matrixValue, settings.scale, matrixValue);
 
-        const matrix = mat4_2.create();
-        mat4_2.multiply(matrix, camera.getViewMatrix(), camera.getProjectionMatrix());
-    
-        mat4.multiply(camera.getProjectionMatrix(), camera.getViewMatrix(), matrixValue);
-
+        if(settings.temp > 0.5)
+        {
+            const matrix = mat4_2.create();
+            mat4_2.multiply(matrix, camera.getViewMatrix(), camera.getProjectionMatrix());
+        
+            mat4.multiply(camera.getProjectionMatrix(), camera.getViewMatrix(), matrixValue);
+        }
 
 
         // viewValue = new Float32Array([-1*settings.translation.x, -1*settings.translation.y, -1*settings.translation.z, 1]);
         viewValue[0] = settings.translation[0]; viewValue[1] = settings.translation[1]; viewValue[2] = settings.translation[2]; viewValue[3] = 1;
         timeValue[0] = now;
+        wrieValue[0] = settings.wireframe[0];
 
         // upload the uniform values to the uniform buffer
         device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
@@ -263,7 +256,7 @@ async function main() {
         {
             bindGroups.push(createBindGroup(device, pipeline_Face, pipeline_Edge, pipeline_Vertex, Base_Vertex_Buffer,levels[i],i+1));
         }
-
+        
         const encoder3 = device.createCommandEncoder({ label : 'encoder',});
 
         let computePassData = [];
@@ -272,7 +265,6 @@ async function main() {
         {
             computePassData.push({prefix: '_'+(i), bindGroup_Face: bindGroups[i].bindGroup_Face, bindGroup_Edge: bindGroups[i].bindGroup_Edge, bindGroup_Vertex: bindGroups[i].bindGroup_Vertex});
         }
-
         
         for (const data of computePassData) {
             const prefix = data.prefix;
@@ -283,19 +275,19 @@ async function main() {
             const pass_Face = encoder3.beginComputePass();
             pass_Face.setPipeline(pipeline_Face);
             pass_Face.setBindGroup(0, bindGroup_Face);
-            pass_Face.dispatchWorkgroups(64);
+            pass_Face.dispatchWorkgroups(1000);
             pass_Face.end();
         
             const pass_Edge = encoder3.beginComputePass();
             pass_Edge.setPipeline(pipeline_Edge);
             pass_Edge.setBindGroup(0, bindGroup_Edge);
-            pass_Edge.dispatchWorkgroups(64);
+            pass_Edge.dispatchWorkgroups(1000);
             pass_Edge.end();
         
             const pass_Vertex = encoder3.beginComputePass();
             pass_Vertex.setPipeline(pipeline_Vertex);
             pass_Vertex.setBindGroup(0, bindGroup_Vertex);
-            pass_Vertex.dispatchWorkgroups(64);
+            pass_Vertex.dispatchWorkgroups(1000);
             pass_Vertex.end();
         }
         const commandBuffer3 = encoder3.finish();
@@ -304,13 +296,13 @@ async function main() {
         const encoder2 = device.createCommandEncoder();
         const pass = encoder2.beginRenderPass(renderPassDescriptor);
 
-        // if (settings.nArray > 6) {nArray = new Uint32Array([64, 32, 16, 8, 4, 2 , 1]);}
-        // else if (settings.nArray > 5) {nArray = new Uint32Array([32, 16, 8, 4, 2]);}
-        // else if (settings.nArray > 4) {nArray = new Uint32Array([16, 8, 4, 2, 1]);}
-        // else if (settings.nArray > 3) {nArray = new Uint32Array([8, 4, 2, 1, 1]);}
-        // else if (settings.nArray > 2) {nArray = new Uint32Array([4, 2, 1, 1, 1]);}
-        // else if (settings.nArray > 1) {nArray = new Uint32Array([2, 1, 1, 1, 1]);}
-        // else if (settings.nArray >= 0) {nArray = new Uint32Array([1, 1, 1, 1, 1]);}
+        if (settings.nArray > 6) {nArray = new Uint32Array([64, 32, 16, 8, 4, 2, 1]);}
+        else if (settings.nArray > 5) {nArray = new Uint32Array([32, 16, 8, 4, 2, 1, 1]);}
+        else if (settings.nArray > 4) {nArray = new Uint32Array([16, 8, 4, 2, 1, 1, 1]);}
+        else if (settings.nArray > 3) {nArray = new Uint32Array([8, 4, 2, 1, 1, 1, 1]);}
+        else if (settings.nArray > 2) {nArray = new Uint32Array([4, 2, 1, 1, 1, 1, 1]);}
+        else if (settings.nArray > 1) {nArray = new Uint32Array([2, 1, 1, 1, 1, 1, 1]);}
+        else if (settings.nArray >= 0) {nArray = new Uint32Array([1, 1, 1, 1, 1, 1, 1]);}
 
         const { indices, texcoordDatas, indexBuffers, vertexBuffers } = createBuffers(device, nArray, depth);
 

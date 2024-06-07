@@ -195,4 +195,3 @@ export async function changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer
 
 }
 
-

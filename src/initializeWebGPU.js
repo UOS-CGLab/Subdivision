@@ -24,7 +24,7 @@ export async function initializeWebGPU() {
         alphaMode: 'premultiplied',
     });
 
-    return { device, context, presentationFormat, canTimestamp };
+    return { canvas, device, context, presentationFormat, canTimestamp };
 }
 
 export async function fetchData() {
