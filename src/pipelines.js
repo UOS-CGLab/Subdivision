@@ -305,7 +305,7 @@ export async function createPipelines(device, presentationFormat) {
         code: `
         struct Uniforms {
             matrix: mat4x4f,
-            view: vec4f,
+            view: vec3f,
             time: f32,
             wireAdjust: f32,
         };
@@ -329,7 +329,7 @@ export async function createPipelines(device, presentationFormat) {
             let p = vert.position.xyz;
 
             // vsOut.position = uni.matrix * vec4f(p*250, 1);
-            vsOut.position = uni.matrix * vec4f(p*(1-0.0005*50)*5, 1);                  
+            vsOut.position = uni.matrix * vec4f(p*5, 1);         
             return vsOut;
         }
 

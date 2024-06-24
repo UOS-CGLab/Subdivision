@@ -128,7 +128,7 @@ export async function changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer
 
     let colorStorageBuffers = [];
 
-    for (let i = 0; i < depth+1; i++) {
+    for (let i = 0; i <= depth; i++) {
         colorStorageBuffers.push(device.createBuffer({
             label: 'color',
             size: colors[i].byteLength,
@@ -137,18 +137,16 @@ export async function changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer
         device.queue.writeBuffer(colorStorageBuffers[i], 0, colors[i]);
     }
 
-
-
-    const indexBuffer5 = device.createBuffer({
+    const OrdinaryPointBuffer = device.createBuffer({
         label: 'index buffer',
         size: OrdinaryPointData.byteLength,
         usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
     });
-    device.queue.writeBuffer(indexBuffer5, 0, OrdinaryPointData);
+    device.queue.writeBuffer(OrdinaryPointBuffer, 0, OrdinaryPointData);
 
     const fixedBindGroups = [];
-    const fixedBindGroup1 = device.createBindGroup({
-        label: 'bind group for object',
+    const OrdinaryPointfixedBindGroup = device.createBindGroup({
+        label: 'bind group for pipe2',
         layout: pipeline2.getBindGroupLayout(0),
         entries: [
         { binding: 0, resource: { buffer: uniformBuffer } },
@@ -174,7 +172,7 @@ export async function changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer
             { binding: 1, resource: { buffer: Base_Vertex_Buffer } },
             ],
         }));
-        for(let j=0; j<depth + 1; j++)
+        for(let j=0; j<=depth; j++)
         {
             changedBindGroups.push(device.createBindGroup({
                 label: 'bind group for object',
@@ -189,9 +187,10 @@ export async function changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer
     
     return {
         fixedBindGroups,
+        OrdinaryPointfixedBindGroup,
+        OrdinaryPointBuffer,
         animeBindGroup,
         changedBindGroups
     };
 
 }
-
