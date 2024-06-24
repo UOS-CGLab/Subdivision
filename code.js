@@ -8,7 +8,7 @@ import { createPipelines } from './src/pipelines.js';
 import { createBuffers } from './src/makeBuffer.js';
 import { Camera } from './src/camera.js';
 import * as mat4_2 from "./gl-matrix/mat4.js";
-const myString = "9";
+const myString = "10";
 // const depth = 6;
 
 async function main() {
@@ -72,7 +72,7 @@ async function main() {
     document.addEventListener('mousedown', handlemousedown);
     
 
-    let depth = 4;
+    let depth = 6;
 
     const { device, context, presentationFormat, canTimestamp } = await initializeWebGPU();
         

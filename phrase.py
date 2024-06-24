@@ -20,7 +20,7 @@ def obj_to_json(obj_file, json_file):
         json.dump(data, file, indent=4)
 
 # File paths
-obj_file_path = 'monsterfrog.obj'
+obj_file_path = 'monsterfrog_5copies.obj'
 json_file_path = 'base.json'
 
 # Convert OBJ to JSON
