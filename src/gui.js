@@ -10,6 +10,7 @@ export function initializeScene() {
         scale: [1, 1, 1],
         pipelineValue: [1],
         nArray: [4],
+        ordinaryValue: [4],
         draw: [1, 1, 1, 1, 1, 1, 1],
         wireframe: [0.01],
         temp: [0],
@@ -31,6 +32,7 @@ export function initializeScene() {
     gui.add(settings.scale, '2', 0, 20).name('scale.z');
     gui.add(settings.pipelineValue, '0', 0, 3).name('pipeline V or L or F');
     gui.add(settings.nArray, '0', 0, 7).name('tesselation');
+    gui.add(settings.ordinaryValue, '0', 0, 7).name('ordinary level');
     gui.add(settings.draw, '0', 0, 1);
     gui.add(settings.draw, '1', 0, 1);
     gui.add(settings.draw, '2', 0, 1);

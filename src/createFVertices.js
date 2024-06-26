@@ -34,33 +34,33 @@ export async function createFVertices(folderName, depth) {
         return;
     }
 
-    // let preOrdinaryPointData = [];
-    // try {
-    //     for(let i=0; i<depth; i++)
-    //     {
-    //         const extraOrdinaryResponse = await fetch(`${basePath}/extra_ordinary.txt`);
-    //         const extraOrdinaryData = await extraOrdinaryResponse.text();
-    //         const ordinaryArray = extraOrdinaryData.split(',').map(parseFloat);
-    //         preOrdinaryPointData.push(new Uint32Array(ordinaryArray));
-    //     }
-    // } catch (error) {
-    //     console.error('Error fetching extra_ordinary.txt:', error);
-    //     return;
-    // }
-
-    let preOrdinaryPointData;
+    let preOrdinaryPointData = [];
     try {
-        // for(let i=0; i<depth; i++)
+        for(let i=0; i<=depth; i++)
         {
-            const extraOrdinaryResponse = await fetch(`${basePath}/extra_ordinary.txt`);
+            const extraOrdinaryResponse = await fetch(`${basePath}/extra_ordinary`+i+`.txt`);
             const extraOrdinaryData = await extraOrdinaryResponse.text();
             const ordinaryArray = extraOrdinaryData.split(',').map(parseFloat);
-            preOrdinaryPointData = (new Uint32Array(ordinaryArray));
+            preOrdinaryPointData.push(new Uint32Array(ordinaryArray));
         }
     } catch (error) {
         console.error('Error fetching extra_ordinary.txt:', error);
         return;
     }
+
+    // let preOrdinaryPointData;
+    // try {
+    //     // for(let i=0; i<depth; i++)
+    //     {
+    //         const extraOrdinaryResponse = await fetch(`${basePath}/extra_ordinary.txt`);
+    //         const extraOrdinaryData = await extraOrdinaryResponse.text();
+    //         const ordinaryArray = extraOrdinaryData.split(',').map(parseFloat);
+    //         preOrdinaryPointData = (new Uint32Array(ordinaryArray));
+    //     }
+    // } catch (error) {
+    //     console.error('Error fetching extra_ordinary.txt:', error);
+    //     return;
+    // }
 
     const OrdinaryPointData = preOrdinaryPointData;
 

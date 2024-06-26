@@ -14,7 +14,7 @@ import * as vec3 from "../gl-matrix/vec3.js";
 
 export class Camera {
     constructor() {
-        this.position = vec3.fromValues(0, 0, 50);
+        this.position = vec3.fromValues(0, 0, 10);
         this.target = vec3.fromValues(0, 0, 0);
         this.direction = vec3.fromValues(0, 0, -1);
         this.up = vec3.fromValues(0, 1, 0);

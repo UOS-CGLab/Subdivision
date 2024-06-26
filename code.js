@@ -7,19 +7,17 @@ import { createBufferData, createBindGroup, changedBindGroup } from './src/creat
 import { createPipelines } from './src/pipelines.js';
 import { createBuffers } from './src/makeBuffer.js';
 import { Camera } from './src/camera.js';
-
 import * as mat4_2 from '../gl-matrix/mat4.js';
 
 const myString = "monsterfrog";
 const depth = 5;
 
-
 async function main() {
-    const { device, context, presentationFormat, canTimestamp } = await initializeWebGPU();
-        
-    const data = await fetch('./topology.json');
-    const data2 = await fetch('./base.json');
+    const { canvas, device, context, presentationFormat, canTimestamp } = await initializeWebGPU();
+    const camera = new Camera();
 
+    const data = await fetch('./'+myString+'/topology.json');
+    const data2 = await fetch('./'+myString+'/base.json');
     const obj = await data.json();
     const base = await data2.json();
     
@@ -210,9 +208,10 @@ async function main() {
 
     let nArray = new Uint32Array([1,1,1,1,1,1, 1]);
     let pipelineValue = 1;
+    let ordinaryValue = 1;
 
     const { pipeline_Face, pipeline_Edge, pipeline_Vertex, pipelines, pipeline2, pipelineAnime } = await createPipelines(device, presentationFormat);
-    const { fixedBindGroups, OrdinaryPointfixedBindGroup, OrdinaryPointBuffer, animeBindGroup, changedBindGroups } = await changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer, connectivityStorageBuffers, pipelines, pipeline2, pipelineAnime, myString, settings, depth);
+    const { fixedBindGroups, OrdinaryPointfixedBindGroup, OrdinaryPointBuffers, animeBindGroup, changedBindGroups } = await changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer, connectivityStorageBuffers, pipelines, pipeline2, pipelineAnime, myString, settings, depth);
 
     async function render(now) {
         now *= 0.001;  // convert to seconds
@@ -373,11 +372,13 @@ async function main() {
                 pass.drawIndexed(nArray[i] * nArray[i] * 6,  j * 2 * 1000 + 100000);
             }
         }
+        ordinaryValue = parseInt(settings.ordinaryValue);
+        if(ordinaryValue > depth) ordinaryValue = depth
         pass.setPipeline(pipeline2);
         pass.setBindGroup(0, OrdinaryPointfixedBindGroup);
         pass.setVertexBuffer(0, OrdinaryBuffer); //base_vertex_buffer
-        pass.setIndexBuffer(OrdinaryPointBuffer, 'uint32');
-        pass.drawIndexed(OrdinaryPointBuffer.size / 4);
+        pass.setIndexBuffer(OrdinaryPointBuffers[ordinaryValue], 'uint32');
+        pass.drawIndexed(OrdinaryPointBuffers[ordinaryValue].size / 4);
         pass.end();
 
         if (canTimestamp) {
