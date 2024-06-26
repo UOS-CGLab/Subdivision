@@ -7,12 +7,20 @@ import { createBufferData, createBindGroup, changedBindGroup } from './src/creat
 import { createPipelines } from './src/pipelines.js';
 import { createBuffers } from './src/makeBuffer.js';
 import { Camera } from './src/camera.js';
-import * as mat4_2 from "./gl-matrix/mat4.js";
-const myString = "10";
-// const depth = 6;
+
+import * as mat4_2 from '../gl-matrix/mat4.js';
+
+const myString = "monsterfrog";
+const depth = 5;
+
 
 async function main() {
+    const { canvas, device, context, presentationFormat, canTimestamp } = await initializeWebGPU();
     const camera = new Camera();
+
+
+    const data = await fetch('./'+myString+'/topology.json');
+    const data2 = await fetch('./'+myString+'/base.json');
 
     function handleKeyUp(event) {
         switch (event.key) {
@@ -78,9 +86,10 @@ async function main() {
         
     const data = await fetch('./topology.json');
     const data2 = await fetch('./base.json');
+
     const obj = await data.json();
     const base = await data2.json();
-
+    
     const uniformBufferSize = (24) * 4;
     const uniformBuffer = device.createBuffer({
         label: 'uniforms',
@@ -94,36 +103,108 @@ async function main() {
     const kMatrixOffset = 0;
     const viewOffset = 16;
     const timeOffset = 20;
+    const wireOffset = 21;
 
     const matrixValue = uniformValues.subarray(kMatrixOffset, kMatrixOffset + 16);
     const viewValue = uniformValues.subarray(viewOffset, viewOffset + 4);
-    const timeValue = uniformValues.subarray(timeOffset, timeOffset + 4);
+    const timeValue = uniformValues.subarray(timeOffset, timeOffset + 1);
+    const wrieValue = uniformValues.subarray(timeOffset, timeOffset + 1);
 
+    let lastX;
+    let lastY;
+    let angle = [0,0];
+    let dragging = false;
+
+    canvas.onwheel = function(ev)
+    {
+        camera.setFov(camera.fov + ev.deltaY*0.1);
+        console.log(camera.fov);
+    }
+    canvas.onmousedown = function(ev) 
+    {
+        let x = ev.clientX, y = ev.clientY;
+        let bb = ev.target.getBoundingClientRect();
+        if (bb.left <= x && x < bb.right && bb.top <= y && y < bb.bottom)
+        {
+            lastX = x;
+            lastY = y;
+            dragging = true;
+        }
+    }
+    canvas.onmouseup = function(ev) { dragging = false; };
+    canvas.onmousemove = function(ev)
+    {    
+        let x = ev.clientX;
+        let y = ev.clientY;
+        if(dragging)
+        {
+            let offset = [x - lastX, y - lastY];
+            if(offset[0] != 0 || offset[1] != 0) // For some reason, the offset becomes zero sometimes...
+            {
+                // mat4.copy(VP, P);
+                // mat4.multiply(VP, VP, V);
+                // let axis = unproject_vector([offset[1], offset[0], 0], VP, 
+                //     gl.getParameter(gl.VIEWPORT));
+                // mat4.rotate(V, V, toRadian(length2(offset)), [axis[0], axis[1], axis[2]]);
+
+                camera.rotate(offset[0] * -0.01, offset[1] * -0.01);
+            }
+        }
+        lastX = x;
+        lastY = y;
+    }
+    let keyValue = 1;
+    function handleKeyUp(ev) {
+        switch (ev.key) {
+            case 'w':
+                camera.moveForward(keyValue);
+                break;
+            case 's':
+                camera.moveBackward(keyValue);
+                break;
+            case 'a':
+                camera.moveLeft(keyValue);
+                break;
+            case 'd':
+                camera.moveRight(keyValue);
+                break;
+            default:
+                //return;
+        }
+        console.log(ev);
+    }
+    document.addEventListener('keyup', handleKeyUp);
 
     const { connectivitys, OrdinaryPointData } = await createFVertices(myString, depth);
-
+    
     let levels = [];
     let levelsize = 0;
 
-    for (let i=0; i<depth; i++)
+    for (let i=0; i<=depth; i++)
         {
             const level = createBufferData(device, obj, i);
             levelsize += level.size;
             levels.push(level);
         }
-
+    
+    console.log(levels);
     
     const Base_Vertex = new Float32Array(base.Base_Vertex);
-    const Base_Vertex_Buffer = device.createBuffer({
+    let Base_Vertex_Buffer = device.createBuffer({
+        label: 'Base_Vertex_Buffer',
         size : levelsize + Base_Vertex.byteLength*4,
         usage : GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST|GPUBufferUsage.COPY_SRC,
     });
     device.queue.writeBuffer(Base_Vertex_Buffer, 0, Base_Vertex);
-
+    let Base_Vertex_Read_Buffer = device.createBuffer({
+        label: 'Base_Vertex_Read_Buffer',
+        size : Base_Vertex_Buffer.size,
+        usage : GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
+    });
 
     let connectivityStorageBuffers = [];
-    
-    for (let i=0; i<depth+1; i++)
+
+    for (let i=0; i<=depth; i++)
     {
         const connectivityStorageBuffer = device.createBuffer({
             label: 'storage buffer vertices',
@@ -189,19 +270,18 @@ async function main() {
 
     let narray = [];
 
-    for (let i=0; i<depth+1; i++)
+    for (let i=0; i<=depth; i++)
     {
         narray.push(max(2**(depth-1-i),1));
     }
 
-    //let nArray = new Uint32Array(narray);
-
     let nArray = new Uint32Array([1,1,1,1,1,1, 1]);
+    let pipelineValue = 1;
 
     const { pipeline_Face, pipeline_Edge, pipeline_Vertex, pipelines, pipeline2, pipelineAnime } = await createPipelines(device, presentationFormat);
-    const { fixedBindGroups, animeBindGroup, changedBindGroups } = await changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer, connectivityStorageBuffers, pipelines, pipeline2, pipelineAnime, myString, settings, depth);
+    const { fixedBindGroups, OrdinaryPointfixedBindGroup, OrdinaryPointBuffer, animeBindGroup, changedBindGroups } = await changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer, connectivityStorageBuffers, pipelines, pipeline2, pipelineAnime, myString, settings, depth);
 
-    function render(now) {
+    async function render(now) {
         now *= 0.001;  // convert to seconds
         const deltaTime = now - then;
         then = now;
@@ -232,16 +312,20 @@ async function main() {
         mat4.rotateZ(matrixValue, settings.rotation[2], matrixValue);
         mat4.scale(matrixValue, settings.scale, matrixValue);
 
-        const matrix = mat4_2.create();
-        mat4_2.multiply(matrix, camera.getViewMatrix(), camera.getProjectionMatrix());
-    
-        mat4.multiply(camera.getProjectionMatrix(), camera.getViewMatrix(), matrixValue);
-
-
+        if(settings.temp > 0.5)
+        {
+            const matrix = mat4_2.create();
+            mat4_2.multiply(matrix, camera.getViewMatrix(), camera.getProjectionMatrix());
+        
+            camera.update();
+            mat4.multiply(camera.getProjectionMatrix(), camera.getViewMatrix(), matrixValue);
+        }
+        keyValue = settings.keyValue;
 
         // viewValue = new Float32Array([-1*settings.translation.x, -1*settings.translation.y, -1*settings.translation.z, 1]);
         viewValue[0] = settings.translation[0]; viewValue[1] = settings.translation[1]; viewValue[2] = settings.translation[2]; viewValue[3] = 1;
         timeValue[0] = now;
+        wrieValue[0] = settings.wireframe[0];
 
         // upload the uniform values to the uniform buffer
         device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
@@ -251,7 +335,7 @@ async function main() {
         const passAnime = encoder.beginComputePass();
         passAnime.setPipeline(pipelineAnime);
         passAnime.setBindGroup(0, animeBindGroup);
-        passAnime.dispatchWorkgroups(100);
+        passAnime.dispatchWorkgroups(65535);
         passAnime.end();
 
 
@@ -259,20 +343,21 @@ async function main() {
         device.queue.submit([commandBuffer]);
 
         let bindGroups = [];
-        for (let i=0; i<depth; i++) 
+        for (let i=0; i<=depth; i++) 
         {
             bindGroups.push(createBindGroup(device, pipeline_Face, pipeline_Edge, pipeline_Vertex, Base_Vertex_Buffer,levels[i],i+1));
         }
 
+        // base_vertex_buffer 갱신
+        
         const encoder3 = device.createCommandEncoder({ label : 'encoder',});
 
         let computePassData = [];
 
-        for (let i=0; i<depth; i++)
+        for (let i=0; i<=depth; i++)
         {
             computePassData.push({prefix: '_'+(i), bindGroup_Face: bindGroups[i].bindGroup_Face, bindGroup_Edge: bindGroups[i].bindGroup_Edge, bindGroup_Vertex: bindGroups[i].bindGroup_Vertex});
         }
-
         
         for (const data of computePassData) {
             const prefix = data.prefix;
@@ -283,62 +368,90 @@ async function main() {
             const pass_Face = encoder3.beginComputePass();
             pass_Face.setPipeline(pipeline_Face);
             pass_Face.setBindGroup(0, bindGroup_Face);
-            pass_Face.dispatchWorkgroups(64);
+            pass_Face.dispatchWorkgroups(65535);
             pass_Face.end();
         
             const pass_Edge = encoder3.beginComputePass();
             pass_Edge.setPipeline(pipeline_Edge);
             pass_Edge.setBindGroup(0, bindGroup_Edge);
-            pass_Edge.dispatchWorkgroups(64);
+            pass_Edge.dispatchWorkgroups(65535);
             pass_Edge.end();
         
             const pass_Vertex = encoder3.beginComputePass();
             pass_Vertex.setPipeline(pipeline_Vertex);
             pass_Vertex.setBindGroup(0, bindGroup_Vertex);
-            pass_Vertex.dispatchWorkgroups(64);
+            pass_Vertex.dispatchWorkgroups(65535);
             pass_Vertex.end();
         }
+        encoder3.copyBufferToBuffer(Base_Vertex_Buffer, 0, Base_Vertex_Read_Buffer, 0, Base_Vertex_Buffer.size);
         const commandBuffer3 = encoder3.finish();
         device.queue.submit([commandBuffer3]);
+
+        // 새로운 버퍼 생성 (usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST)
+        const OrdinaryBuffer = device.createBuffer({
+            label: 'OrdinaryBuffer',
+            size: Base_Vertex_Buffer.size,
+            usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+        });
+        // 커맨드 엔코더 생성
+        const commandEncoder = device.createCommandEncoder();
+        // 데이터 복사를 위한 커맨드 추가
+        commandEncoder.copyBufferToBuffer(
+            Base_Vertex_Buffer, // 소스 버퍼
+            0, // 소스 오프셋
+            OrdinaryBuffer, // 대상 버퍼
+            0, // 대상 오프셋
+            Base_Vertex_Buffer.size // 복사할 데이터 크기
+        );
+        // 커맨드 제출
+        const commandBuffer4 = commandEncoder.finish();
+        device.queue.submit([commandBuffer4]);
 
         const encoder2 = device.createCommandEncoder();
         const pass = encoder2.beginRenderPass(renderPassDescriptor);
 
-        // if (settings.nArray > 6) {nArray = new Uint32Array([64, 32, 16, 8, 4, 2 , 1]);}
-        // else if (settings.nArray > 5) {nArray = new Uint32Array([32, 16, 8, 4, 2]);}
-        // else if (settings.nArray > 4) {nArray = new Uint32Array([16, 8, 4, 2, 1]);}
-        // else if (settings.nArray > 3) {nArray = new Uint32Array([8, 4, 2, 1, 1]);}
-        // else if (settings.nArray > 2) {nArray = new Uint32Array([4, 2, 1, 1, 1]);}
-        // else if (settings.nArray > 1) {nArray = new Uint32Array([2, 1, 1, 1, 1]);}
-        // else if (settings.nArray >= 0) {nArray = new Uint32Array([1, 1, 1, 1, 1]);}
+        if (settings.nArray > 6) {nArray = new Uint32Array([64, 32, 16, 8, 4, 2, 1]);}
+        else if (settings.nArray > 5) {nArray = new Uint32Array([32, 16, 8, 4, 2, 1, 1]);}
+        else if (settings.nArray > 4) {nArray = new Uint32Array([16, 8, 4, 2, 1, 1, 1]);}
+        else if (settings.nArray > 3) {nArray = new Uint32Array([8, 4, 2, 1, 1, 1, 1]);}
+        else if (settings.nArray > 2) {nArray = new Uint32Array([4, 2, 1, 1, 1, 1, 1]);}
+        else if (settings.nArray > 1) {nArray = new Uint32Array([2, 1, 1, 1, 1, 1, 1]);}
+        else if (settings.nArray >= 0) {nArray = new Uint32Array([1, 1, 1, 1, 1, 1, 1]);}
 
         const { indices, texcoordDatas, indexBuffers, vertexBuffers } = createBuffers(device, nArray, depth);
 
-        for (let i = 0; i < depth + 1; i++) {
+        for (let i = 0; i <= depth; i++) {
             device.queue.writeBuffer(vertexBuffers[i], 0, texcoordDatas[i]);
             device.queue.writeBuffer(indexBuffers[i], 0, indices[i]);
         }
-        if(settings.pipelineValue[0] < 1.0)         {pass.setPipeline(pipelines[0]);pass.setBindGroup(0, fixedBindGroups[0]);}
-        else if(settings.pipelineValue[0] < 2.0)    {pass.setPipeline(pipelines[1]);pass.setBindGroup(0, fixedBindGroups[1]);}
-        else if(settings.pipelineValue[0] < 3.0)    {pass.setPipeline(pipelines[2]);pass.setBindGroup(0, fixedBindGroups[2]);}
+        if(settings.pipelineValue[0] < 1.0)         pipelineValue = 0;
+        else if(settings.pipelineValue[0] < 2.0)    pipelineValue = 1;
+        else if(settings.pipelineValue[0] < 3.0)    pipelineValue = 2;
 
-        for (let i = 0; i < depth + 1; i++) {
+        pass.setPipeline(pipelines[pipelineValue]);
+        pass.setBindGroup(0, fixedBindGroups[pipelineValue]);
+        for (let i = 0; i <= depth; i++) {
             pass.setBindGroup(1, changedBindGroups[i+(depth+1)*parseInt(settings.pipelineValue[0])]);
             pass.setVertexBuffer(0, vertexBuffers[i]);
             pass.setIndexBuffer(indexBuffers[i], 'uint32');
             if(settings.draw[i] > 0.5) {
                 let j = i;
                 if (i > 4); j = 4;
-                pass.drawIndexed(nArray[i] * nArray[i] * 6,  j * 2 * 1000 + 1000);
+                pass.drawIndexed(nArray[i] * nArray[i] * 6,  j * 2 * 1000 + 100000);
             }
         }
+        pass.setPipeline(pipeline2);
+        pass.setBindGroup(0, OrdinaryPointfixedBindGroup);
+        pass.setVertexBuffer(0, OrdinaryBuffer); //base_vertex_buffer
+        pass.setIndexBuffer(OrdinaryPointBuffer, 'uint32');
+        pass.drawIndexed(OrdinaryPointBuffer.size / 4);
         pass.end();
 
         if (canTimestamp) {
-        encoder2.resolveQuerySet(querySet, 0, querySet.count, resolveBuffer, 0);
-        if (resultBuffer.mapState === 'unmapped') {
-            encoder2.copyBufferToBuffer(resolveBuffer, 0, resultBuffer, 0, resultBuffer.size);
-        }
+            encoder2.resolveQuerySet(querySet, 0, querySet.count, resolveBuffer, 0);
+            if (resultBuffer.mapState === 'unmapped') {
+                encoder2.copyBufferToBuffer(resolveBuffer, 0, resultBuffer, 0, resultBuffer.size);
+            }
         }
 
         const commandBuffer2 = encoder2.finish();

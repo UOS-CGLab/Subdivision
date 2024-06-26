@@ -132,7 +132,8 @@ export async function createPipelines(device, presentationFormat) {
         struct Uniforms {
             matrix: mat4x4f,
             view: vec3f,
-            time: vec4f,
+            time: f32,
+            wireAdjust: f32,
         };
 
         struct IndexVertex {
@@ -156,6 +157,8 @@ export async function createPipelines(device, presentationFormat) {
             @builtin(position) position: vec4f,
             @location(0) color: vec4f,
             @location(1) normal: vec3f,
+            @location(2) center: vec3f,
+            @location(3) adjust: f32,
         };
 
         @group(0) @binding(0) var<uniform> uni: Uniforms;
@@ -186,6 +189,10 @@ export async function createPipelines(device, presentationFormat) {
         }
         fn B3prime(t: f32) -> f32 {
             return (1.0/2.0)*t*t;
+        }
+
+        fn length(t: vec3f) -> f32 {
+            return sqrt(pow(t.x, 2)+pow(t.y, 2)+pow(t.z, 2));
         }
 
         @vertex fn vs(
@@ -248,27 +255,48 @@ export async function createPipelines(device, presentationFormat) {
 
             vsOut.position = uni.matrix * vec4f(p*5, 1);
 
+            vsOut.center = vec3f(vert.position.xy, 0);
+
+            let g0 = pos2[  conn[instanceIndex*16+ 5].index  ].position.xyz;
+            let g1 = pos2[  conn[instanceIndex*16+ 6].index  ].position.xyz;
+            let g2 = pos2[  conn[instanceIndex*16+ 9].index  ].position.xyz;
+            let g3 = pos2[  conn[instanceIndex*16+10].index  ].position.xyz;
+
             let normal = normalize(  cross(  (uni.matrix*tu).xyz, (uni.matrix*tv).xyz  )  );
             vsOut.normal = normal;
             let view = normalize(  -1*uni.view - p  );
+            _ = color;
             // vsOut.color = vec4f( p, 1);
             vsOut.color = color.value;
             vsOut.color += color.value * vec4f(dot(view, normal)*0.5, dot(view, normal)*0.5, dot(view, normal)*0.5, 1)  ;
             if(dot(view, normal) > 0)
             {
-            vsOut.color += vec4f((pow(dot(view, normal), 100)*0.2), (pow(dot(view, normal), 100)*0.2), (pow(dot(view, normal), 100)*0.2), 1);
+                vsOut.color += vec4f((pow(dot(view, normal), 100)*0.2), (pow(dot(view, normal), 100)*0.2), (pow(dot(view, normal), 100)*0.2), 1);
             }
+
+            var wire = uni.wireAdjust;
+            if(uni.wireAdjust == 1)
+            {
+                vsOut.color = vec4f(0, 0, 0, 0);
+                wire = 1;
+            }            
+            vsOut.adjust = wire/(length(g1 - g0)+length(g3-g2)+length(g2 - g0)+length(g3-g1));
             return vsOut;
         }
 
         @fragment fn fs(vsOut: VSOutput) -> @location(0) vec4f {
             // return vsOut.color;
             
-            if(vsOut.normal.z < 0.0)
+            // if(vsOut.normal.z < 0.0)
+            // {
+            //     discard;
+            // }
+            if(abs(vsOut.center.x - 0.5) > (0.5-vsOut.adjust) || abs(vsOut.center.y - 0.5) > (0.5-vsOut.adjust)) // 0.49 vsOut.adjust
             {
-            discard;
+                return vec4f(0, 0, 0, 1);
             }
             return vsOut.color;
+            // return vec4f(vsOut.center, 1);  
         }
         `,
     });
@@ -277,8 +305,9 @@ export async function createPipelines(device, presentationFormat) {
         code: `
         struct Uniforms {
             matrix: mat4x4f,
-            view: vec4f,
-            time: vec4f,
+            view: vec3f,
+            time: f32,
+            wireAdjust: f32,
         };
 
         struct Vertex {
@@ -300,7 +329,7 @@ export async function createPipelines(device, presentationFormat) {
             let p = vert.position.xyz;
 
             // vsOut.position = uni.matrix * vec4f(p*250, 1);
-            vsOut.position = uni.matrix * vec4f(p*(1-0.0005*50)*5, 1);                  
+            vsOut.position = uni.matrix * vec4f(p*5, 1);         
             return vsOut;
         }
 
@@ -315,7 +344,8 @@ export async function createPipelines(device, presentationFormat) {
         struct Uniforms {
             matrix: mat4x4f,
             view: vec3f,
-            time: vec4f,
+            time: f32,
+            wireAdjust: f32,
         };
 
         @group(0) @binding(0) var<uniform> uni: Uniforms;
@@ -323,12 +353,11 @@ export async function createPipelines(device, presentationFormat) {
 
         @compute @workgroup_size(256) fn cs(@builtin(global_invocation_id) global_invocation_id: vec3<u32>){
             let id = global_invocation_id.x;
-            _ = uni.time[0];
+            _ = uni.time;
             
             baseVertex[id*4+0] = baseVertex[id*4+0];
-            // baseVertex[id*4+1] = sin(uni.time[0]*f32(id)/100)+cos(uni.time[0]*f32(id)/100) + (baseVertex[id*4+0] + baseVertex[id*4+2])/2;
+            // baseVertex[id*4+1] = sin(uni.time*f32(id)/10)+cos(uni.time*f32(id)/10) + (baseVertex[id*4+0] + baseVertex[id*4+2])/2;
             baseVertex[id*4+1] = baseVertex[id*4+1];
-            // baseVertex[id*4+1] = (baseVertex[id*4+0] + baseVertex[id*4+2])/2
             baseVertex[id*4+2] = baseVertex[id*4+2];
             baseVertex[id*4+3] = 0;
         }
