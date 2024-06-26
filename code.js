@@ -7,7 +7,6 @@ import { createBufferData, createBindGroup, changedBindGroup } from './src/creat
 import { createPipelines } from './src/pipelines.js';
 import { createBuffers } from './src/makeBuffer.js';
 import { Camera } from './src/camera.js';
-import * as mat4_2 from '../gl-matrix/mat4.js';
 
 const myString = "monsterfrog";
 const depth = 5;
