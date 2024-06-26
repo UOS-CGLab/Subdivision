@@ -245,8 +245,8 @@ async function main() {
 
         if(settings.temp > 0.5)
         {
-            const matrix = mat4_2.create();
-            mat4_2.multiply(matrix, camera.getViewMatrix(), camera.getProjectionMatrix());
+            const matrix = mat4.create();
+            mat4.multiply(matrix, camera.getViewMatrix(), camera.getProjectionMatrix());
         
             camera.update();
             mat4.multiply(camera.getProjectionMatrix(), camera.getViewMatrix(), matrixValue);
