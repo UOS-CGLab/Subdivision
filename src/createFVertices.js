@@ -34,14 +34,29 @@ export async function createFVertices(folderName, depth) {
         return;
     }
 
-    const [connectivity0, connectivity1, connectivity2, connectivity3, connectivity4] = preConnectivityData;
+    // let preOrdinaryPointData = [];
+    // try {
+    //     for(let i=0; i<depth; i++)
+    //     {
+    //         const extraOrdinaryResponse = await fetch(`${basePath}/extra_ordinary.txt`);
+    //         const extraOrdinaryData = await extraOrdinaryResponse.text();
+    //         const ordinaryArray = extraOrdinaryData.split(',').map(parseFloat);
+    //         preOrdinaryPointData.push(new Uint32Array(ordinaryArray));
+    //     }
+    // } catch (error) {
+    //     console.error('Error fetching extra_ordinary.txt:', error);
+    //     return;
+    // }
 
     let preOrdinaryPointData;
     try {
-        const extraOrdinaryResponse = await fetch(`${basePath}/extra_ordinary.txt`);
-        const extraOrdinaryData = await extraOrdinaryResponse.text();
-        const ordinaryArray = extraOrdinaryData.split(',').map(parseFloat);
-        preOrdinaryPointData = new Uint32Array(ordinaryArray);
+        // for(let i=0; i<depth; i++)
+        {
+            const extraOrdinaryResponse = await fetch(`${basePath}/extra_ordinary.txt`);
+            const extraOrdinaryData = await extraOrdinaryResponse.text();
+            const ordinaryArray = extraOrdinaryData.split(',').map(parseFloat);
+            preOrdinaryPointData = (new Uint32Array(ordinaryArray));
+        }
     } catch (error) {
         console.error('Error fetching extra_ordinary.txt:', error);
         return;

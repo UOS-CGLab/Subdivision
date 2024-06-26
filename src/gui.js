@@ -13,6 +13,7 @@ export function initializeScene() {
         draw: [1, 1, 1, 1, 1, 1, 1],
         wireframe: [0.01],
         temp: [0],
+        keyValue: [1],
     };
 
     const radToDegOptions = { min: -360, max: 360, step: 1, converters: GUI.converters.radToDeg };
@@ -39,6 +40,7 @@ export function initializeScene() {
     gui.add(settings.draw, '6', 0, 1);
     gui.add(settings.wireframe, '0', 0, 1).name('wireAdjust');
     gui.add(settings.temp, '0', 0, 1).name('temp');
+    gui.add(settings.keyValue, '0', 0, 100).name('keyValue');
 
     return { settings };
 }

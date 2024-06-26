@@ -137,6 +137,7 @@ export async function changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer
         device.queue.writeBuffer(colorStorageBuffers[i], 0, colors[i]);
     }
 
+    // for(let i=0)
     const OrdinaryPointBuffer = device.createBuffer({
         label: 'index buffer',
         size: OrdinaryPointData.byteLength,

@@ -9,8 +9,8 @@ import { createBuffers } from './src/makeBuffer.js';
 import { Camera } from './src/camera.js';
 import * as mat4_2 from '../gl-matrix/mat4.js';
 
-const myString = "multifrog";
-const depth = 4;
+const myString = "monsterfrog";
+const depth = 5;
 
 async function main() {
     const { canvas, device, context, presentationFormat, canTimestamp } = await initializeWebGPU();
@@ -46,12 +46,11 @@ async function main() {
     let angle = [0,0];
     let dragging = false;
 
-    // canvas.onwheel = function(ev)
-    // {
-    //     fovy += ev.deltaY*0.1;
-    //     fovy = Math.min(170, Math.max(3, fovy));
-    //     mat4.perspective(P, toRadian(fovy), 1, 1, 100); 
-    // }
+    canvas.onwheel = function(ev)
+    {
+        camera.setFov(camera.fov + ev.deltaY*0.1);
+        console.log(camera.fov);
+    }
     canvas.onmousedown = function(ev) 
     {
         let x = ev.clientX, y = ev.clientY;
@@ -85,6 +84,27 @@ async function main() {
         lastX = x;
         lastY = y;
     }
+    let keyValue = 1;
+    function handleKeyUp(ev) {
+        switch (ev.key) {
+            case 'w':
+                camera.moveForward(keyValue);
+                break;
+            case 's':
+                camera.moveBackward(keyValue);
+                break;
+            case 'a':
+                camera.moveLeft(keyValue);
+                break;
+            case 'd':
+                camera.moveRight(keyValue);
+                break;
+            default:
+                //return;
+        }
+        console.log(ev);
+    }
+    document.addEventListener('keyup', handleKeyUp);
 
     const { connectivitys, OrdinaryPointData } = await createFVertices(myString, depth);
     
@@ -187,6 +207,7 @@ async function main() {
     }
 
     let nArray = new Uint32Array([1,1,1,1,1,1, 1]);
+    let pipelineValue = 1;
 
     const { pipeline_Face, pipeline_Edge, pipeline_Vertex, pipelines, pipeline2, pipelineAnime } = await createPipelines(device, presentationFormat);
     const { fixedBindGroups, OrdinaryPointfixedBindGroup, OrdinaryPointBuffer, animeBindGroup, changedBindGroups } = await changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer, connectivityStorageBuffers, pipelines, pipeline2, pipelineAnime, myString, settings, depth);
@@ -227,9 +248,10 @@ async function main() {
             const matrix = mat4_2.create();
             mat4_2.multiply(matrix, camera.getViewMatrix(), camera.getProjectionMatrix());
         
+            camera.update();
             mat4.multiply(camera.getProjectionMatrix(), camera.getViewMatrix(), matrixValue);
         }
-
+        keyValue = settings.keyValue;
 
         // viewValue = new Float32Array([-1*settings.translation.x, -1*settings.translation.y, -1*settings.translation.z, 1]);
         viewValue[0] = settings.translation[0]; viewValue[1] = settings.translation[1]; viewValue[2] = settings.translation[2]; viewValue[3] = 1;
@@ -333,10 +355,12 @@ async function main() {
             device.queue.writeBuffer(vertexBuffers[i], 0, texcoordDatas[i]);
             device.queue.writeBuffer(indexBuffers[i], 0, indices[i]);
         }
-        if(settings.pipelineValue[0] < 1.0)         {pass.setPipeline(pipelines[0]);pass.setBindGroup(0, fixedBindGroups[0]);}
-        else if(settings.pipelineValue[0] < 2.0)    {pass.setPipeline(pipelines[1]);pass.setBindGroup(0, fixedBindGroups[1]);}
-        else if(settings.pipelineValue[0] < 3.0)    {pass.setPipeline(pipelines[2]);pass.setBindGroup(0, fixedBindGroups[2]);}
+        if(settings.pipelineValue[0] < 1.0)         pipelineValue = 0;
+        else if(settings.pipelineValue[0] < 2.0)    pipelineValue = 1;
+        else if(settings.pipelineValue[0] < 3.0)    pipelineValue = 2;
 
+        pass.setPipeline(pipelines[pipelineValue]);
+        pass.setBindGroup(0, fixedBindGroups[pipelineValue]);
         for (let i = 0; i <= depth; i++) {
             pass.setBindGroup(1, changedBindGroups[i+(depth+1)*parseInt(settings.pipelineValue[0])]);
             pass.setVertexBuffer(0, vertexBuffers[i]);
