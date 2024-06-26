@@ -9,7 +9,7 @@ import { createBuffers } from './src/makeBuffer.js';
 import { Camera } from './src/camera.js';
 
 
-const myString = "monsterfrog";
+const myString = "suzanne";
 const depth = 5;
 
 async function main() {
@@ -46,6 +46,42 @@ async function main() {
     let angle = [0,0];
     let dragging = false;
 
+    let keyValue = 1;
+    let shiftValue = 0;
+    function handleKeyUp(ev) {
+        switch (ev.key) {
+            case 'w':
+                camera.moveUp(keyValue);
+                break;
+            case 's':
+                camera.moveDown(keyValue);
+                break;
+            case 'a':
+                camera.moveLeft(keyValue);
+                break;
+            case 'd':
+                camera.moveRight(keyValue);
+                break;
+            case 'Shift':
+                shiftValue = 0;
+                break;
+            default:
+                //return;
+        }
+        console.log(ev);
+    }
+    function handleKeyDown(ev) {
+        switch (ev.key) {
+            case 'Shift':
+                shiftValue = 1;
+                break;
+            default:
+                //return;
+        }
+        console.log(ev);
+    }
+    document.addEventListener('keyup', handleKeyUp);
+    document.addEventListener('keydown', handleKeyDown);
     canvas.onwheel = function(ev)
     {
         camera.moveForward(ev.deltaY*0.1);
@@ -76,34 +112,19 @@ async function main() {
                 // let axis = unproject_vector([offset[1], offset[0], 0], VP, 
                 //     gl.getParameter(gl.VIEWPORT));
                 // mat4.rotate(V, V, toRadian(length2(offset)), [axis[0], axis[1], axis[2]]);
-
-                camera.rotate(offset[0] * -0.01, offset[1] * -0.01);
+                console.log(shiftValue);
+                if(shiftValue == 0)
+                    camera.rotate(offset[0] * -0.01, offset[1] * -0.01);
+                else
+                {
+                    camera.moveLeft(offset[0] * keyValue * 0.01);
+                    camera.moveDown(offset[1] * keyValue * 0.01);
+                }
             }
         }
         lastX = x;
         lastY = y;
     }
-    let keyValue = 1;
-    function handleKeyUp(ev) {
-        switch (ev.key) {
-            case 'w':
-                camera.moveForward(keyValue);
-                break;
-            case 's':
-                camera.moveBackward(keyValue);
-                break;
-            case 'a':
-                camera.moveLeft(keyValue);
-                break;
-            case 'd':
-                camera.moveRight(keyValue);
-                break;
-            default:
-                //return;
-        }
-        console.log(ev);
-    }
-    document.addEventListener('keyup', handleKeyUp);
 
     const { connectivitys, OrdinaryPointData } = await createFVertices(myString, depth);
     
