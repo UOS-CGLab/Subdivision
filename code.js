@@ -118,7 +118,7 @@ async function main() {
                 else
                 {
                     camera.moveLeft(offset[0] * keyValue * 0.01);
-                    camera.moveDown(offset[1] * keyValue * 0.01);
+                    camera.moveUp(offset[1] * keyValue * 0.01);
                 }
             }
         }
