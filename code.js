@@ -8,6 +8,7 @@ import { createPipelines } from './src/pipelines.js';
 import { createBuffers } from './src/makeBuffer.js';
 import { Camera } from './src/camera.js';
 
+
 const myString = "monsterfrog";
 const depth = 5;
 
@@ -47,8 +48,7 @@ async function main() {
 
     canvas.onwheel = function(ev)
     {
-        camera.setFov(camera.fov + ev.deltaY*0.1);
-        console.log(camera.fov);
+        camera.moveForward(ev.deltaY*0.1);
     }
     canvas.onmousedown = function(ev) 
     {
