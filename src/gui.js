@@ -5,22 +5,25 @@ export function initializeScene() {
     const degToRad = d => d * Math.PI / 180;
 
     const settings = {
+        renderingMode: 'solid',
         translation: [0, 0, -50],
         rotation: [degToRad(-25), degToRad(-70), degToRad(180)],
         scale: [1, 1, 1],
-        pipelineValue: [1],
-        nArray: [4],
-        ordinaryValue: [4],
+        pipelineValue: [2],
+        nArray: [1],
+        ordinaryValue: [2],
         draw: [1, 1, 1, 1, 1, 1, 1],
         wireframe: [0.01],
-        temp: [0],
+        temp: [0.6],
         keyValue: [1],
     };
 
     const radToDegOptions = { min: -360, max: 360, step: 1, converters: GUI.converters.radToDeg };
 
     const gui = new GUI();
+    const modeOptions = ['solid', 'wireframe', 'points'];
 
+    gui.add(settings, 'mode', modeOptions).name('Rendering Mode');
     gui.add(settings.translation, '0', -100, 100).name('translation.x');
     gui.add(settings.translation, '1', -100, 100).name('translation.y');
     gui.add(settings.translation, '2', -1000, 1000).name('translation.z');

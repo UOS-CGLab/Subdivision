@@ -48,6 +48,14 @@ export class Camera {
         vec3.scaleAndAdd(this.position, this.position, this.right, -distance);
     }
 
+    moveUp(distance) {
+        vec3.scaleAndAdd(this.position, this.position, this.up, distance);
+    }
+
+    moveDown(distance) {
+        vec3.scaleAndAdd(this.position, this.position, this.up, -distance);
+    }
+
     moveBackward(distance) {
         vec3.scaleAndAdd(this.position, this.position, this.direction, -distance);
     }
