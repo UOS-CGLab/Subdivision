@@ -443,13 +443,41 @@ async function main() {
 
     const observer = new ResizeObserver(entries => {
         for (const entry of entries) {
-        const canvas = entry.target;
-        const width = entry.contentBoxSize[0].inlineSize;
-        const height = entry.contentBoxSize[0].blockSize;
-        canvas.width = Math.max(1, Math.min(width, device.limits.maxTextureDimension2D));
-        canvas.height = Math.max(1, Math.min(height, device.limits.maxTextureDimension2D));
+            const canvas = entry.target;
+            const aspectRatio = 16 / 9;  // 고정된 비율 (예: 16:9)
+
+            let width, height;
+
+            if (entry.contentBoxSize) {
+                if (Array.isArray(entry.contentBoxSize)) {
+                    width = entry.contentBoxSize[0].inlineSize;
+                    height = entry.contentBoxSize[0].blockSize;
+                } else {
+                    width = entry.contentBoxSize.inlineSize;
+                    height = entry.contentBoxSize.blockSize;
+                }
+            } else {
+                width = entry.contentRect.width;
+                height = entry.contentRect.height;
+            }
+
+            // 비율을 유지하며 너비와 높이를 설정
+            if (width / height > aspectRatio) {
+                width = height * aspectRatio;
+            } else {
+                height = width / aspectRatio;
+            }
+
+            // 캔버스 크기를 비율에 맞게 조정
+            canvas.style.width = `${width}px`;
+            canvas.style.height = `${height}px`;
+
+            // 캔버스의 실제 렌더링 크기를 설정
+            canvas.width = Math.max(1, Math.min(Math.round(width), device.limits.maxTextureDimension2D));
+            canvas.height = Math.max(1, Math.min(Math.round(height), device.limits.maxTextureDimension2D));
         }
     });
+
     observer.observe(canvas);
 }
 
