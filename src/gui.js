@@ -4,6 +4,7 @@ export class Settings {
     constructor() {
         this.settings = {
             renderingMode: 'solid',
+            object: 'suzanne',
             pipelineSetting: 'F',
             tesselation: 3,
             ordinaryLevel: 3,
@@ -15,6 +16,7 @@ export class Settings {
 
     addGui(gui) {
         gui.add(this.settings, 'renderingMode', ['solid', 'wireframe', 'points']).name('renderingMode')// .onChange((name, value) => this.onRadioChange('renderingMode', value));
+        gui.add(this.settings, 'object', ['suzanne', 'monsterfrog', 'bunny', 'dragon', 'cube', 'sphere']).name('object')
         gui.add(this.settings, 'pipelineSetting', ['V', 'L', 'F']).name('Pipeline V or L or F')// .onChange((name, value) => this.onRadioChange('pipelineSetting', value));
         gui.add(this.settings, 'tesselation', 0, 7, 1).name('tesselation').step(1)// .onChange((name, value) => this.onSliderChange('tesselation', value));
         gui.add(this.settings, 'ordinaryLevel', 0, 7, 1).name('ordinaryLevel').step(1)// .onChange((name, value) => this.onSliderChange('ordinaryLevel', value));

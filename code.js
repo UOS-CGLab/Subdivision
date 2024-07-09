@@ -271,7 +271,7 @@ async function main() {
         camera.update();
         mat4.multiply(camera.getProjectionMatrix(), camera.getViewMatrix(), matrixValue);
 
-        keyValue = 1;
+        keyValue = settings.getProterty('moveSpeed');
         timeValue[0] = now;
         wrieValue[0] = settings.getProterty('wireAdjust');
 
