@@ -14,17 +14,17 @@ export class Settings {
     }
 
     addGui(gui) {
-        gui.add(this.settings, 'renderingMode', ['solid', 'wireframe', 'points']).name('renderingMode').onChange((name, value) => this.onRadioChange('renderingMode', value));
-        gui.add(this.settings, 'pipelineSetting', ['V', 'L', 'F']).name('Pipeline V or L or F').onChange((name, value) => this.onRadioChange('pipelineSetting', value));
-        gui.add(this.settings, 'tesselation', 0, 7, 1).name('tesselation').step(1).onChange((name, value) => this.onSliderChange('tesselation', value));
-        gui.add(this.settings, 'ordinaryLevel', 0, 7, 1).name('ordinaryLevel').step(1).onChange((name, value) => this.onSliderChange('ordinaryLevel', value));
+        gui.add(this.settings, 'renderingMode', ['solid', 'wireframe', 'points']).name('renderingMode')// .onChange((name, value) => this.onRadioChange('renderingMode', value));
+        gui.add(this.settings, 'pipelineSetting', ['V', 'L', 'F']).name('Pipeline V or L or F')// .onChange((name, value) => this.onRadioChange('pipelineSetting', value));
+        gui.add(this.settings, 'tesselation', 0, 7, 1).name('tesselation').step(1)// .onChange((name, value) => this.onSliderChange('tesselation', value));
+        gui.add(this.settings, 'ordinaryLevel', 0, 7, 1).name('ordinaryLevel').step(1)// .onChange((name, value) => this.onSliderChange('ordinaryLevel', value));
 
         for (let i = 0; i < 8; i++) {
-            gui.add(this.settings.draw, i).name('Draw ' + (i + 1)).onChange((name, value) => this.onCheckboxChange('Draw ' + (i + 1), value));
+            gui.add(this.settings.draw, i).name('Draw ' + (i + 1))// .onChange((name, value) => this.onCheckboxChange('Draw ' + (i + 1), value));
         }
 
-        gui.add(this.settings, 'wireAdjust', 0, 0.1).name('wireAdjust').onChange((name, value) => this.onSliderChange('wireAdjust', value));
-        gui.add(this.settings, 'moveSpeed', 0, 100).name('moveSpeed').onChange((name, value) => this.onSliderChange('moveSpeed', value));
+        gui.add(this.settings, 'wireAdjust', 0, 0.1).name('wireAdjust')// .onChange((name, value) => this.onSliderChange('wireAdjust', value));
+        gui.add(this.settings, 'moveSpeed', 0, 100).name('moveSpeed')// .onChange((name, value) => this.onSliderChange('moveSpeed', value));
     }
 
     onRadioChange(name, value) {

@@ -272,12 +272,6 @@ async function main() {
         mat4.multiply(camera.getProjectionMatrix(), camera.getViewMatrix(), matrixValue);
 
         keyValue = 1;
-
-        // let translation: [0, 0, -50];
-        // let rotation: [degToRad(-25), degToRad(-70), degToRad(180)];
-
-        // viewValue = new Float32Array([0, 0, -1, 1]);
-        // viewValue[0] = 0; viewValue[1] = 0; viewValue[2] = -50; viewValue[3] = 1;
         timeValue[0] = now;
         wrieValue[0] = settings.getProterty('wireAdjust');
 
@@ -399,11 +393,6 @@ async function main() {
             pass.setBindGroup(1, changedBindGroups[i+(depth+1)*pipelineValue]);
             pass.setVertexBuffer(0, vertexBuffers[i]);
             pass.setIndexBuffer(indexBuffers[i], 'uint32');
-            // if(settings.getProterty('draw')[i] == true) {
-            //     let j = i;
-            //     if (i > 4); j = 4;
-            //     pass.drawIndexed(nArray[i] * nArray[i] * 6,  j * 2 * 1000 + 100000);
-            // }
             if(settings.getProterty('draw')[i] == true && i <= settings.getProterty('ordinaryLevel')){
                 let j = i < 4 ? i : 4;
                 pass.drawIndexed(nArray[i] * nArray[i] * 6,  j * 2 * 1000 + 100000);
