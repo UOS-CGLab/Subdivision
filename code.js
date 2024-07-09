@@ -8,7 +8,6 @@ import { createPipelines } from './src/pipelines.js';
 import { createBuffers } from './src/makeBuffer.js';
 import { Camera } from './src/camera.js';
 
-
 const myString = "suzanne";
 const depth = 5;
 
@@ -210,7 +209,7 @@ async function main() {
         }),
     };
 
-    const { settings } = initializeScene();
+    let settings = initializeScene();
 
     let then = 0;
 
@@ -226,7 +225,7 @@ async function main() {
         narray.push(max(2**(depth-1-i),1));
     }
 
-    let nArray = new Uint32Array([1,1,1,1,1,1, 1]);
+    let nArray = new Uint32Array([1,1,1,1,1,1,1]);
     let pipelineValue = 1;
     let ordinaryValue = 1;
 
@@ -255,29 +254,32 @@ async function main() {
         }
         renderPassDescriptor.depthStencilAttachment.view = depthTexture.createView();
 
+        const degToRad = d => d * Math.PI / 180;
         // mat4.projection(canvas.clientWidth, canvas.clientHeight, 10000, matrixValue);
         const aspect = canvas.clientWidth / canvas.clientHeight;
-        mat4.perspective(100, aspect, 1, 300, matrixValue);
-        mat4.translate(matrixValue, settings.translation, matrixValue);
-        mat4.rotateX(matrixValue, settings.rotation[0], matrixValue);
-        mat4.rotateY(matrixValue, settings.rotation[1], matrixValue);
-        mat4.rotateZ(matrixValue, settings.rotation[2], matrixValue);
-        mat4.scale(matrixValue, settings.scale, matrixValue);
+        // mat4.perspective(100, aspect, 1, 300, matrixValue);
+        // mat4.translate(matrixValue, [0, 0, -50], matrixValue);
+        // mat4.rotateX(matrixValue, degToRad(-25), matrixValue);
+        // mat4.rotateY(matrixValue, degToRad(-70), matrixValue);
+        // mat4.rotateZ(matrixValue, degToRad(180), matrixValue);
+        // mat4.scale(matrixValue, [1,1,1], matrixValue);
 
-        if(settings.temp > 0.5)
-        {
-            const matrix = mat4.create();
-            mat4.multiply(matrix, camera.getViewMatrix(), camera.getProjectionMatrix());
-        
-            camera.update();
-            mat4.multiply(camera.getProjectionMatrix(), camera.getViewMatrix(), matrixValue);
-        }
-        keyValue = settings.keyValue;
 
-        // viewValue = new Float32Array([-1*settings.translation.x, -1*settings.translation.y, -1*settings.translation.z, 1]);
-        viewValue[0] = settings.translation[0]; viewValue[1] = settings.translation[1]; viewValue[2] = settings.translation[2]; viewValue[3] = 1;
+        const matrix = mat4.create();
+        mat4.multiply(matrix, camera.getViewMatrix(), camera.getProjectionMatrix());
+
+        camera.update();
+        mat4.multiply(camera.getProjectionMatrix(), camera.getViewMatrix(), matrixValue);
+
+        keyValue = 1;
+
+        // let translation: [0, 0, -50];
+        // let rotation: [degToRad(-25), degToRad(-70), degToRad(180)];
+
+        // viewValue = new Float32Array([0, 0, -1, 1]);
+        // viewValue[0] = 0; viewValue[1] = 0; viewValue[2] = -50; viewValue[3] = 1;
         timeValue[0] = now;
-        wrieValue[0] = settings.wireframe[0];
+        wrieValue[0] = settings.getProterty('wireAdjust');
 
         // upload the uniform values to the uniform buffer
         device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
@@ -362,13 +364,17 @@ async function main() {
         const encoder2 = device.createCommandEncoder();
         const pass = encoder2.beginRenderPass(renderPassDescriptor);
 
-        if (settings.nArray > 6) {nArray = new Uint32Array([64, 32, 16, 8, 4, 2, 1]);}
-        else if (settings.nArray > 5) {nArray = new Uint32Array([32, 16, 8, 4, 2, 1, 1]);}
-        else if (settings.nArray > 4) {nArray = new Uint32Array([16, 8, 4, 2, 1, 1, 1]);}
-        else if (settings.nArray > 3) {nArray = new Uint32Array([8, 4, 2, 1, 1, 1, 1]);}
-        else if (settings.nArray > 2) {nArray = new Uint32Array([4, 2, 1, 1, 1, 1, 1]);}
-        else if (settings.nArray > 1) {nArray = new Uint32Array([2, 1, 1, 1, 1, 1, 1]);}
-        else if (settings.nArray >= 0) {nArray = new Uint32Array([1, 1, 1, 1, 1, 1, 1]);}
+        switch (settings.getProterty('tesselation'))
+        {
+            case 0: case 1:  nArray = new Uint32Array([1, 1, 1, 1, 1, 1, 1]); break;
+            case 2: nArray = new Uint32Array([2, 1, 1, 1, 1, 1, 1]); break;
+            case 3: nArray = new Uint32Array([4, 2, 1, 1, 1, 1, 1]); break;
+            case 4: nArray = new Uint32Array([8, 4, 2, 1, 1, 1, 1]); break;
+            case 5: nArray = new Uint32Array([16, 8, 4, 2, 1, 1, 1]); break;
+            case 6: nArray = new Uint32Array([32, 16, 8, 4, 2, 1, 1]); break;
+            case 7: nArray = new Uint32Array([64, 32, 16, 8, 4, 2, 1]); break;
+
+        }
 
         const { indices, texcoordDatas, indexBuffers, vertexBuffers } = createBuffers(device, nArray, depth);
 
@@ -376,23 +382,34 @@ async function main() {
             device.queue.writeBuffer(vertexBuffers[i], 0, texcoordDatas[i]);
             device.queue.writeBuffer(indexBuffers[i], 0, indices[i]);
         }
-        if(settings.pipelineValue[0] < 1.0)         pipelineValue = 0;
-        else if(settings.pipelineValue[0] < 2.0)    pipelineValue = 1;
-        else if(settings.pipelineValue[0] < 3.0)    pipelineValue = 2;
+        // if(settings.getProterty('pipelineSetting') == 'V')         pipelineValue = 0;
+        // else if(settings.pipelineValue[0] < 2.0)    pipelineValue = 1;
+        // else if(settings.pipelineValue[0] < 3.0)    pipelineValue = 2;
+
+        switch (settings.getProterty('pipelineSetting'))
+        {
+            case 'V': pipelineValue = 0; break;
+            case 'L': pipelineValue = 1; break;
+            case 'F': pipelineValue = 2; break;
+        }
 
         pass.setPipeline(pipelines[pipelineValue]);
         pass.setBindGroup(0, fixedBindGroups[pipelineValue]);
         for (let i = 0; i <= depth; i++) {
-            pass.setBindGroup(1, changedBindGroups[i+(depth+1)*parseInt(settings.pipelineValue[0])]);
+            pass.setBindGroup(1, changedBindGroups[i+(depth+1)*pipelineValue]);
             pass.setVertexBuffer(0, vertexBuffers[i]);
             pass.setIndexBuffer(indexBuffers[i], 'uint32');
-            if(settings.draw[i] > 0.5) {
-                let j = i;
-                if (i > 4); j = 4;
+            // if(settings.getProterty('draw')[i] == true) {
+            //     let j = i;
+            //     if (i > 4); j = 4;
+            //     pass.drawIndexed(nArray[i] * nArray[i] * 6,  j * 2 * 1000 + 100000);
+            // }
+            if(settings.getProterty('draw')[i] == true && i <= settings.getProterty('ordinaryLevel')){
+                let j = i < 4 ? i : 4;
                 pass.drawIndexed(nArray[i] * nArray[i] * 6,  j * 2 * 1000 + 100000);
             }
         }
-        ordinaryValue = parseInt(settings.ordinaryValue);
+        ordinaryValue = settings.getProterty('ordinaryLevel');
         if(ordinaryValue > depth) ordinaryValue = depth
         pass.setPipeline(pipeline2);
         pass.setBindGroup(0, OrdinaryPointfixedBindGroup);
