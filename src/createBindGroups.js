@@ -108,7 +108,7 @@ export function createBindGroup(device, pipeline_Face, pipeline_Edge, pipeline_V
 
 
 
-export async function changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer, connectivityStorageBuffers, pipelines, pipeline2, pipelineAnime, myString, settings, depth)
+export async function changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer, displacementBuffer, texture, sampler, connectivityStorageBuffers, pipelines, pipeline2, pipelineAnime, myString, settings, depth)
 {
     const {
         connectivitys,
@@ -136,7 +136,6 @@ export async function changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer
         device.queue.writeBuffer(colorStorageBuffers[i], 0, colors[i]);
     }
 
-    console.log(OrdinaryPointData);
     let OrdinaryPointBuffers = [];
     for(let i=0; i<=depth; i++)
     {
@@ -169,11 +168,14 @@ export async function changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer
 
     for (let i = 0; i < 3; i++) {
         fixedBindGroups.push(device.createBindGroup({
-            label: 'bind group for object',
+            label: 'fixedbind group for object',
             layout: pipelines[i].getBindGroupLayout(0),
             entries: [
-            { binding: 0, resource: { buffer: uniformBuffer } },
-            { binding: 1, resource: { buffer: Base_Vertex_Buffer } },
+                { binding: 0, resource: { buffer: uniformBuffer } },
+                { binding: 1, resource: { buffer: Base_Vertex_Buffer } },
+                // { binding: 2, resource: texture.createView() },
+                // { binding: 3, resource: sampler },
+                { binding: 2, resource: { buffer: Base_Vertex_Buffer } },
             ],
         }));
         for(let j=0; j<=depth; j++)

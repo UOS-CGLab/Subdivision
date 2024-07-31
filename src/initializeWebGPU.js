@@ -27,13 +27,32 @@ export async function initializeWebGPU() {
     return { canvas, device, context, presentationFormat, canTimestamp };
 }
 
-export async function fetchData() {
-    const responseTopology = await fetch('./../topology.json');
-    const responseBase = await fetch('./../base.json');
+export async function fetchData(myString) {
+    const data = await fetch('./../'+myString+'/topology.json');
+    const data2 = await fetch('./../'+myString+'/base.json');
+    const obj = await data.json();
+    const base = await data2.json();
 
-    const topology = await responseTopology.json();
-    const base = await responseBase.json();
+    // fetch('./../'+myString+'/base')
+    //     .then(response => response.json())
+    //     .then(files => {
+    //         const list = document.getElementById('fileList');
+    //         list.innerHTML = ''; // 기존 목록을 비웁니다.
+    //         files.forEach(file => {
+    //             const listItem = document.createElement('li');
+    //             listItem.textContent = file;
+    //             list.appendChild(listItem);
+    //         });
+    //     })
+    //     .catch(error => console.error('Error fetching files:', error));
 
-    return { topology, base };
+    const animationBase = await (await fetch('./../'+myString+'/animation/base.json')).json();
+    // for(let i=0; i<=99; i++)
+    // {
+    //     animationBase.push(await (await fetch('./../'+myString+'/animation/base'+String(i).padStart(2, '0')+'.json')).json());
+    // }
+    console.log(animationBase);
+
+    return { obj, base, animationBase };
 }
 

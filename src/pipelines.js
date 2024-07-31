@@ -104,8 +104,8 @@ export async function createPipelines(device, presentationFormat) {
         label: 'Face Point Compute Pipeline',
         layout: 'auto',
         compute: {
-        module: module_Face,
-        entryPoint: 'compute_FacePoint',
+            module: module_Face,
+            entryPoint: 'compute_FacePoint',
         },
     });
 
@@ -113,8 +113,8 @@ export async function createPipelines(device, presentationFormat) {
         label: 'Edge Point Compute Pipeline',
         layout: 'auto',
         compute: {
-        module: module_Edge,
-        entryPoint: 'compute_EdgePoint',
+            module: module_Edge,
+            entryPoint: 'compute_EdgePoint',
         },
     });
 
@@ -122,8 +122,8 @@ export async function createPipelines(device, presentationFormat) {
         label: 'Vertex Point Compute Pipeline',
         layout: 'auto',
         compute: {
-        module: module_Vertex,
-        entryPoint: 'compute_VertexPoint',
+            module: module_Vertex,
+            entryPoint: 'compute_VertexPoint',
         },
     });
 
@@ -163,6 +163,9 @@ export async function createPipelines(device, presentationFormat) {
 
         @group(0) @binding(0) var<uniform> uni: Uniforms;
         @group(0) @binding(1) var<storage, read> pos2: array<Vertex>;
+        @group(0) @binding(2) var<storage, read> texture: array<Vertex>;
+        // @group(0) @binding(2) var u_earthbump1k: texture_2d<f32>;
+        // @group(0) @binding(3) var sampler0: sampler;
         @group(1) @binding(0) var<storage, read> conn: array<Connectivity>;
         @group(1) @binding(1) var<storage, read> color: Color;
 
@@ -253,6 +256,17 @@ export async function createPipelines(device, presentationFormat) {
                     +B3(vert.position.x)*B2prime(vert.position.y)*pos2[  conn[instanceIndex*16+14].index  ].position
                     +B3(vert.position.x)*B3prime(vert.position.y)*pos2[  conn[instanceIndex*16+15].index  ].position;
 
+            let imageWidth: f32 = 512;  // 예시 이미지 너비
+            let imageHeight: f32 = 512;  // 예시 이미지 높이
+
+            // 텍스처 좌표에 따라 이미지에서 변위 값을 샘플링
+            let texCoord = vert.position; // Vertex 구조체에 texCoords가 있다고 가정
+            let xIndex = i32(texCoord.x * imageWidth);
+            let yIndex = i32(texCoord.y * imageHeight);
+            let index = xIndex + yIndex * i32(imageWidth);
+            let displacement = texture[index];  // 이미지 데이터에서 변위 값 조회
+
+            // vsOut.position = uni.matrix * vec4f(p*5, 1-displacement.position.x*0.01);
             vsOut.position = uni.matrix * vec4f(p*5, 1);
 
             vsOut.center = vec3f(vert.position.xy, 0);
@@ -261,6 +275,9 @@ export async function createPipelines(device, presentationFormat) {
             let g1 = pos2[  conn[instanceIndex*16+ 6].index  ].position.xyz;
             let g2 = pos2[  conn[instanceIndex*16+ 9].index  ].position.xyz;
             let g3 = pos2[  conn[instanceIndex*16+10].index  ].position.xyz;
+
+            // let uv = vec2<f32>(0.5, 0.5);
+            // let temp = textureSample(u_earthbump1k, sampler0, uv);
 
             let normal = normalize(  cross(  (uni.matrix*tu).xyz, (uni.matrix*tv).xyz  )  );
             vsOut.normal = normal;
@@ -368,93 +385,93 @@ export async function createPipelines(device, presentationFormat) {
         label: 'pipeline_point_list',
         layout: 'auto',
         vertex: {
-        module: module1,
-        entryPoint: 'vs',
-        buffers: [
-            {
-            arrayStride: (2) * 4, // (2) floats, 4 bytes each
-            attributes: [
-                { shaderLocation: 0, offset: 0, format: 'float32x2' },  // position
+            module: module1,
+            entryPoint: 'vs',
+            buffers: [
+                {
+                    arrayStride: (2) * 4, // (2) floats, 4 bytes each
+                    attributes: [
+                        { shaderLocation: 0, offset: 0, format: 'float32x2' },  // position
+                    ],
+                },
             ],
-            },
-        ],
         },
         fragment: {
-        module: module1,
-        entryPoint: 'fs',
-        targets: [{ format: presentationFormat }],
+            module: module1,
+            entryPoint: 'fs',
+            targets: [{ format: presentationFormat }],
         },
         primitive: {
-        topology: 'point-list',
-        listIndexFormat: 'uint32',
-        // cullMode: 'back',
+            topology: 'point-list',
+            listIndexFormat: 'uint32',
+            // cullMode: 'back',
         },
         depthStencil: {
-        depthWriteEnabled: true,
-        depthCompare: 'less',
-        format: 'depth24plus',
+            depthWriteEnabled: true,
+            depthCompare: 'less',
+            format: 'depth24plus',
         },
     });
     const pipeline_line_list = device.createRenderPipeline({
         label: 'pipeline_line_list',
         layout: 'auto',
         vertex: {
-        module: module1,
-        entryPoint: 'vs',
-        buffers: [
-            {
-            arrayStride: (2) * 4, // (2) floats, 4 bytes each
-            attributes: [
-                { shaderLocation: 0, offset: 0, format: 'float32x2' },  // position
+            module: module1,
+            entryPoint: 'vs',
+            buffers: [
+                {
+                    arrayStride: (2) * 4, // (2) floats, 4 bytes each
+                    attributes: [
+                        { shaderLocation: 0, offset: 0, format: 'float32x2' },  // position
+                    ],
+                },
             ],
-            },
-        ],
         },
         fragment: {
-        module: module1,
-        entryPoint: 'fs',
-        targets: [{ format: presentationFormat }],
+            module: module1,
+            entryPoint: 'fs',
+            targets: [{ format: presentationFormat }],
         },
         primitive: {
-        topology: 'line-list',
-        listIndexFormat: 'uint32',
-        // cullMode: 'back',
+            topology: 'line-list',
+            listIndexFormat: 'uint32',
+            // cullMode: 'back',
         },
         depthStencil: {
-        depthWriteEnabled: true,
-        depthCompare: 'less',
-        format: 'depth24plus',
+            depthWriteEnabled: true,
+            depthCompare: 'less',
+            format: 'depth24plus',
         },
     });
     const pipeline_face_list = device.createRenderPipeline({
         label: 'pipeline_face_list',
         layout: 'auto',
         vertex: {
-        module: module1,
-        entryPoint: 'vs',
-        buffers: [
-            {
-            arrayStride: (2) * 4, // (2) floats, 4 bytes each
-            attributes: [
-                { shaderLocation: 0, offset: 0, format: 'float32x2' },  // position
+            module: module1,
+            entryPoint: 'vs',
+            buffers: [
+                {
+                    arrayStride: (2) * 4, // (2) floats, 4 bytes each
+                    attributes: [
+                        { shaderLocation: 0, offset: 0, format: 'float32x2' },  // position
+                    ],
+                },
             ],
-            },
-        ],
         },
         fragment: {
-        module: module1,
-        entryPoint: 'fs',
-        targets: [{ format: presentationFormat }],
+            module: module1,
+            entryPoint: 'fs',
+            targets: [{ format: presentationFormat }],
         },
         primitive: {
-        // topology: 'point-list',
-        listIndexFormat: 'uint32',
-        // cullMode: 'back',
+            // topology: 'point-list',
+            listIndexFormat: 'uint32',
+            // cullMode: 'back',
         },
         depthStencil: {
-        depthWriteEnabled: true,
-        depthCompare: 'less',
-        format: 'depth24plus',
+            depthWriteEnabled: true,
+            depthCompare: 'less',
+            format: 'depth24plus',
         },
     });
 
@@ -465,30 +482,30 @@ export async function createPipelines(device, presentationFormat) {
         label: 'pipeline2',
         layout: 'auto',
         vertex: {
-        module: module2,
-        entryPoint: 'vs',
-        buffers: [
-            {
-            arrayStride: (4) * 4, // (4) floats, 4 bytes each
-            attributes: [
-                { shaderLocation: 0, offset: 0, format: 'float32x4' },  // position
+            module: module2,
+            entryPoint: 'vs',
+            buffers: [
+                {
+                    arrayStride: (4) * 4, // (4) floats, 4 bytes each
+                    attributes: [
+                        { shaderLocation: 0, offset: 0, format: 'float32x4' },  // position
+                    ],
+                },
             ],
-            },
-        ],
         },
         fragment: {
-        module: module2,
-        entryPoint: 'fs',
-        targets: [{ format: presentationFormat }],
+            module: module2,
+            entryPoint: 'fs',
+            targets: [{ format: presentationFormat }],
         },
         primitive: {
-        // topology: 'line-list',
-        listIndexFormat: 'uint32',
+            // topology: 'line-list',
+            listIndexFormat: 'uint32',
         },
         depthStencil: {
-        depthWriteEnabled: true,
-        depthCompare: 'less',
-        format: 'depth24plus',
+            depthWriteEnabled: true,
+            depthCompare: 'less',
+            format: 'depth24plus',
         },
     });
 
@@ -496,10 +513,78 @@ export async function createPipelines(device, presentationFormat) {
         label: 'Animation! Compute Pipeline',
         layout: 'auto',
         compute: {
-        module: moduleAnime,
-        entryPoint: 'cs',
+            module: moduleAnime,
+            entryPoint: 'cs',
         },
     });
 
-    return { pipeline_Face, pipeline_Edge, pipeline_Vertex, pipelines, pipeline2, pipelineAnime };
+    const xyzModule = device.createShaderModule({
+        label: 'xyz module',
+        code: `
+            struct OurVertexShaderOutput {
+                @builtin(position) position: vec4f,
+                @location(0) color: vec4f,
+            };
+
+            struct Uniforms {
+                matrix: mat4x4f,
+            };
+
+            @group(0) @binding(0) var<uniform> uni: Uniforms;
+
+            @vertex fn vs(
+                @builtin(vertex_index) vertexIndex : u32
+            ) -> OurVertexShaderOutput {
+                let pos = array(
+                // x축
+                vec3f( -1.0,  0.0,  0.0 ),  
+                vec3f(  1.0,  0.0,  0.0 ),
+                // y축
+                vec3f(  0.0, -1.0,  0.0 ),  
+                vec3f(  0.0,  1.0,  0.0 ),
+                // z축
+                vec3f(  0.0,  0.0, -1.0 ),  
+                vec3f(  0.0,  0.0,  1.0 ),
+                );
+                let color = array(
+                vec4f(1, 0, 0, 1),
+                vec4f(0, 1, 0, 1),
+                vec4f(0, 0, 1, 1),
+                );
+
+                _ = uni;
+
+                var vsOutput: OurVertexShaderOutput;
+                let xyz = pos[vertexIndex];
+                vsOutput.position = uni.matrix * vec4f(xyz*100, 1.0);
+                vsOutput.color = color[vertexIndex/2];
+                return vsOutput;
+            }
+
+            @fragment fn fs(fsInput: OurVertexShaderOutput) -> @location(0) vec4f {
+                return fsInput.color;
+            }
+        `,
+    });
+
+    const xyzPipeline = device.createRenderPipeline({
+        label: 'hardcoded textured quad pipeline',
+        layout: 'auto',
+        vertex: {
+          module: xyzModule,
+          entry: 'vs',
+        },
+        fragment: {
+          module: xyzModule,
+          entry: 'fs',
+          targets: [{ format: presentationFormat }],
+        },
+        primitive: {
+          topology: 'line-list',
+          listIndexFormat: 'uint32',
+          // cullMode: 'back',
+        },
+    });
+
+    return { pipeline_Face, pipeline_Edge, pipeline_Vertex, pipelines, pipeline2, pipelineAnime, xyzPipeline };
 }

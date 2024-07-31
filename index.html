@@ -4,7 +4,7 @@
 
 <head>
   <meta charset="utf-8">
-  <title>Feature Rendering Subdivision</title>
+  <title>WebGPU Fundamental</title>
 </head>
 
 <body>
@@ -13,15 +13,6 @@
     body {
       margin: 0;
       height: 100%;
-    }
-
-    .canvas-container {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh; /* 부모 요소의 높이를 원하는 만큼 설정 */
-      width: 100%; /* 부모 요소의 너비를 원하는 만큼 설정 */
-      box-sizing: border-box;
     }
 
     canvas {
@@ -40,10 +31,7 @@
       color: white;
     }
   </style>
-  <div class="canvas-container">
-    <canvas id="canvas"></canvas>
-  </div>
-
+  <canvas id="canvas"></canvas>
   <pre id="info"></pre>
   <script type="module", src="./code.js">
 

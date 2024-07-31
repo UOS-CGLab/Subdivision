@@ -1,13 +1,17 @@
-export function createBuffers(device, nArray, depth) {
-    depth = depth + 1;
+function max(a, b)
+{
+    return a > b ? a : b;
+}
 
+function forMakeBuffer(device, depth, patchLevel) {
     let texcoordDatas = [];
     let texcoordData_byteLengths = [];
     let indices = [];
     let index_byteLengths = [];
 
-    for (let i = 0; i < depth; i++) {
-        let N = nArray[i];
+    for (let i = 0; i <= depth; i++) {
+        let N = max(2**(depth-i-patchLevel), 1);
+        // let N = 1.0;
         let texcoordData = new Float32Array((N + 1) * (N + 1) * 2);
         let offset = 0;
         for (let row = 0; row <= N; ++row) {
@@ -39,7 +43,7 @@ export function createBuffers(device, nArray, depth) {
     let vertexBuffers = [];
     let indexBuffers = [];
 
-    for (let i = 0; i < depth; i++) {
+    for (let i = 0; i <= depth; i++) {
         const vertexBuffer = device.createBuffer({
             label: 'vertex buffer vertices',
             size: texcoordData_byteLengths[i],
@@ -55,17 +59,29 @@ export function createBuffers(device, nArray, depth) {
         indexBuffers.push(indexBuffer);
     }
 
-    
-    // const indices = [indices0, indices1, indices2, indices3, indices4];
-    // const texcoordDatas = [texcoordData0, texcoordData1, texcoordData2, texcoordData3, texcoordData4];
-    // const indexBuffers = [indexBuffer0, indexBuffer1, indexBuffer2, indexBuffer3, indexBuffer4];
-    // const vertexBuffers = [vertexBuffer0, vertexBuffer1, vertexBuffer2, vertexBuffer3, vertexBuffer4];
+    return { indices, texcoordDatas, indexBuffers, vertexBuffers }
+}
 
-    const indices2 = indices;
-    const texcoordDatas2 = texcoordDatas;
-    const indexBuffers2 = indexBuffers;
-    const vertexBuffers2 = vertexBuffers;
+export function createBuffers(device, depth)
+{
+    let texcoordDatasArray = [];
+    let indicesArray = [];
+    let indexBuffersArray = [];
+    let vertexBuffersArray = [];
+
+    for(let i=0; i<=depth; i++)
+    {
+        let { indices, texcoordDatas, indexBuffers, vertexBuffers } = forMakeBuffer(device, depth, i);
+        texcoordDatasArray.push(texcoordDatas);
+        indicesArray.push(indices);
+        indexBuffersArray.push(indexBuffers);
+        vertexBuffersArray.push(vertexBuffers);
+    }
+
+    let indices = indicesArray;
+    let texcoordDatas = texcoordDatasArray;
+    let indexBuffers = indexBuffersArray;
+    let vertexBuffers = vertexBuffersArray;
 
     return { indices, texcoordDatas, indexBuffers, vertexBuffers }
-    //return { indices2, texcoordDatas2, indexBuffers2, vertexBuffers2 }
 }

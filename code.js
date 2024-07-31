@@ -7,43 +7,43 @@ import { createBufferData, createBindGroup, changedBindGroup } from './src/creat
 import { createPipelines } from './src/pipelines.js';
 import { createBuffers } from './src/makeBuffer.js';
 import { Camera } from './src/camera.js';
+import { initializeBumpmap } from './src/bumpmap.js';
 
-const myString = "suzanne";
-const depth = 5;
+const myString = "monsterfrog";
+const depth = 4;
 
 async function main() {
     const { canvas, device, context, presentationFormat, canTimestamp } = await initializeWebGPU();
+    const { obj, base, animationBase } = await fetchData(myString);
     const camera = new Camera();
 
-    const data = await fetch('./'+myString+'/topology.json');
-    const data2 = await fetch('./'+myString+'/base.json');
-    const obj = await data.json();
-    const base = await data2.json();
-    
+    const { displacementBuffer, texture, sampler } = initializeBumpmap(device, myString);
+
     const uniformBufferSize = (24) * 4;
     const uniformBuffer = device.createBuffer({
         label: 'uniforms',
         size: uniformBufferSize,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
-    
 
     const uniformValues = new Float32Array(uniformBufferSize / 4);
 
     const kMatrixOffset = 0;
     const viewOffset = 16;
     const timeOffset = 20;
-    const wireOffset = 21;
+    const wireOffset = 24;
 
     const matrixValue = uniformValues.subarray(kMatrixOffset, kMatrixOffset + 16);
     const viewValue = uniformValues.subarray(viewOffset, viewOffset + 4);
-    const timeValue = uniformValues.subarray(timeOffset, timeOffset + 1);
-    const wrieValue = uniformValues.subarray(timeOffset, timeOffset + 1);
+    const timeValue = uniformValues.subarray(timeOffset, timeOffset + 4);
+    const wrieValue = uniformValues.subarray(timeOffset, timeOffset + 4);
 
     let lastX;
     let lastY;
     let angle = [0,0];
     let dragging = false;
+    let selectedPointIndex = null;
+    let spaceCheck = false;
 
     let keyValue = 1;
     let shiftValue = 0;
@@ -63,6 +63,10 @@ async function main() {
                 break;
             case 'Shift':
                 shiftValue = 0;
+                break;
+            case ' ':
+                if(spaceCheck == 0) spaceCheck = 1;
+                else spaceCheck = 0;
                 break;
             default:
                 //return;
@@ -87,70 +91,81 @@ async function main() {
     }
     canvas.onmousedown = function(ev) 
     {
-        let x = ev.clientX, y = ev.clientY;
-        let bb = ev.target.getBoundingClientRect();
-        if (bb.left <= x && x < bb.right && bb.top <= y && y < bb.bottom)
+        if(spaceCheck == 0)
         {
-            lastX = x;
-            lastY = y;
-            dragging = true;
-        }
-    }
-    canvas.onmouseup = function(ev) { dragging = false; };
-    canvas.onmousemove = function(ev)
-    {    
-        let x = ev.clientX;
-        let y = ev.clientY;
-        if(dragging)
-        {
-            let offset = [x - lastX, y - lastY];
-            if(offset[0] != 0 || offset[1] != 0) // For some reason, the offset becomes zero sometimes...
+            let x = ev.clientX, y = ev.clientY;
+            let bb = ev.target.getBoundingClientRect();
+            if (bb.left <= x && x < bb.right && bb.top <= y && y < bb.bottom)
             {
-                // mat4.copy(VP, P);
-                // mat4.multiply(VP, VP, V);
-                // let axis = unproject_vector([offset[1], offset[0], 0], VP, 
-                //     gl.getParameter(gl.VIEWPORT));
-                // mat4.rotate(V, V, toRadian(length2(offset)), [axis[0], axis[1], axis[2]]);
-                console.log(shiftValue);
-                if(shiftValue == 0)
-                    camera.rotate(offset[0] * -0.01, offset[1] * -0.01);
-                else
-                {
-                    camera.moveLeft(offset[0] * keyValue * 0.01);
-                    camera.moveUp(offset[1] * keyValue * 0.01);
-                }
+                lastX = x;
+                lastY = y;
+                dragging = true;
             }
         }
-        lastX = x;
-        lastY = y;
+        else
+        {
+            let rect = canvas.getBoundingClientRect();
+            let x = (ev.clientX - rect.left) / canvas.clientWidth * 2 - 1; // NDC X
+            let y = -(ev.clientY - rect.top) / canvas.clientHeight * 2 + 1; // NDC Y
+        
+            // 포인트 선택 로직
+            getPickedVertexIndex(x, y).then(index => {
+                if (index !== null) {
+                    selectedPointIndex = index;
+                    dragging = true;
+                }
+            });
+        }
+    }
+    canvas.onmouseup = function(ev) { dragging = false; selectedPointIndex = null; };
+    canvas.onmousemove = function(ev)
+    {    
+        if(spaceCheck == 0)
+        {
+            let x = ev.clientX;
+            let y = ev.clientY;
+            if(dragging)
+            {
+                let offset = [x - lastX, y - lastY];
+                if(offset[0] != 0 || offset[1] != 0) // For some reason, the offset becomes zero sometimes...
+                {
+                    console.log(shiftValue);
+                    if(shiftValue == 0)
+                        camera.rotate(offset[0] * -0.01, offset[1] * -0.01);
+                    else
+                    {
+                        camera.moveLeft(offset[0] * keyValue * 0.01);
+                        camera.moveUp(offset[1] * keyValue * 0.01);
+                    }
+                }
+            }
+            lastX = x;
+            lastY = y;
+        }
+        else
+        {
+            if (dragging && (selectedPointIndex != null)) {
+                let rect = canvas.getBoundingClientRect();
+                let x = (ev.clientX - rect.left) / canvas.clientWidth * 2 - 1; // NDC X
+                let y = -(ev.clientY - rect.top) / canvas.clientHeight * 2 + 1; // NDC Y
+        
+                // 포인트 위치 업데이트 로직
+                updatePointPosition(selectedPointIndex, x, y);
+            }
+        }
     }
 
     const { connectivitys, OrdinaryPointData } = await createFVertices(myString, depth);
-    
+
     let levels = [];
     let levelsize = 0;
 
     for (let i=0; i<=depth; i++)
-        {
-            const level = createBufferData(device, obj, i);
-            levelsize += level.size;
-            levels.push(level);
-        }
-    
-    console.log(levels);
-    
-    const Base_Vertex = new Float32Array(base.Base_Vertex);
-    let Base_Vertex_Buffer = device.createBuffer({
-        label: 'Base_Vertex_Buffer',
-        size : levelsize + Base_Vertex.byteLength*4,
-        usage : GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST|GPUBufferUsage.COPY_SRC,
-    });
-    device.queue.writeBuffer(Base_Vertex_Buffer, 0, Base_Vertex);
-    let Base_Vertex_Read_Buffer = device.createBuffer({
-        label: 'Base_Vertex_Read_Buffer',
-        size : Base_Vertex_Buffer.size,
-        usage : GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
-    });
+    {
+        const level = createBufferData(device, obj, i);
+        levelsize += level.size;
+        levels.push(level);
+    }
 
     let connectivityStorageBuffers = [];
 
@@ -164,6 +179,108 @@ async function main() {
         device.queue.writeBuffer(connectivityStorageBuffer, 0, connectivitys[i]);
         connectivityStorageBuffers.push(connectivityStorageBuffer);
     }
+
+    // async function getPickedVertexIndex(ndcX, ndcY) {
+    //     const computeShaderCode = `
+    //         struct VertexBuffer {
+    //             vertices: array<vec4<f32>>,
+    //         };
+    
+    //         struct MouseBuffer {
+    //             mousePos: vec2<f32>,
+    //         };
+    
+    //         @group(0) @binding(0) var<storage, read> vertexBuffer: VertexBuffer;
+    //         @group(0) @binding(1) var<uniform> mouseBuffer: MouseBuffer;
+    //         @group(0) @binding(2) var<storage, read_write> pickedIndex: atomic<u32>;
+    
+    //         @compute @workgroup_size(64)
+    //         fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    //             let idx = global_id.x;
+    //             let vertex = vertexBuffer.vertices[idx];
+                
+    //             let dist = distance(vertex.xy, mouseBuffer.mousePos);
+                
+    //             // 원자적 최소값 계산을 사용하여 가장 가까운 버텍스 인덱스를 갱신
+    //             atomicMin(&pickedIndex, u32(dist * 1000.0));
+    //         }
+    //     `;
+    
+    //     const mouseBuffer = device.createBuffer({
+    //         size: 8,
+    //         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+    //     });
+    //     device.queue.writeBuffer(mouseBuffer, 0, new Float32Array([ndcX, ndcY]));
+    
+    //     const storageIndexBuffer = device.createBuffer({
+    //         size: 4,
+    //         usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
+    //     });
+    //     const readIndexBuffer = device.createBuffer({
+    //         size: 4,
+    //         usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+    //     });
+    //     device.queue.writeBuffer(storageIndexBuffer, 0, new Uint32Array([0xFFFFFFFF]));
+    
+    //     const computeModule = device.createShaderModule({
+    //         code: computeShaderCode,
+    //     });
+    
+    //     const computePipelineLayout = device.createPipelineLayout({
+    //         bindGroupLayouts: [
+    //             device.createBindGroupLayout({
+    //                 entries: [
+    //                     { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-only-storage' } },
+    //                     { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } },
+    //                     { binding: 2, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } }
+    //                 ]
+    //             })
+    //         ]
+    //     });
+    
+    //     const computePipeline = device.createComputePipeline({
+    //         layout: computePipelineLayout,
+    //         compute: {
+    //             module: computeModule,
+    //             entryPoint: 'main',
+    //         },
+    //     });
+    
+    //     const bindGroup = device.createBindGroup({
+    //         layout: computePipeline.getBindGroupLayout(0),
+    //         entries: [
+    //             { binding: 0, resource: { buffer: Base_Vertex_Buffer }},
+    //             { binding: 1, resource: { buffer: mouseBuffer }},
+    //             { binding: 2, resource: { buffer: storageIndexBuffer }}
+    //         ]
+    //     });
+    
+    //     const commandEncoder = device.createCommandEncoder();
+    //     const passEncoder = commandEncoder.beginComputePass();
+    //     passEncoder.setPipeline(computePipeline);
+    //     passEncoder.setBindGroup(0, bindGroup);
+    //     passEncoder.dispatchWorkgroups(Base_Vertex_Buffer.size / 4 / 64);
+    //     passEncoder.end();
+    //     commandEncoder.copyBufferToBuffer(storageIndexBuffer, 0, readIndexBuffer, 0, 4);
+
+    //     const commandBuffer = commandEncoder.finish();
+    //     device.queue.submit([commandBuffer]);
+    
+    //     await readIndexBuffer.mapAsync(GPUMapMode.READ);
+    //     const indexData = new Uint32Array(readIndexBuffer.getMappedRange());
+    //     const pickedIndex = indexData[0];
+    //     readIndexBuffer.unmap();
+    
+    //     return pickedIndex;
+    // }
+
+    // function updatePointPosition(index, x, y) {
+    //     console.log(`Moving point ${index} to (${x}, ${y})`);
+
+    //     // 실제 버퍼 업데이트 로직
+    //     let offset = index*4; // 3D 포인트 위치 (x, y, z)
+    //     device.queue.writeBuffer(Base_Vertex_Buffer, offset, new Float32Array([x*100, y*100]), 0, 2);
+    // }
 
     const { querySet, resolveBuffer, resultBuffer } = (() => {
         if (!canTimestamp) {
@@ -209,35 +326,48 @@ async function main() {
         }),
     };
 
+    let Base_Vertex = new Float32Array(base.Base_Vertex);
     let settings = initializeScene();
 
     let then = 0;
-
     let depthTexture;
-
     const infoElem = document.querySelector('#info');
     let gpuTime = 0;
 
-    let narray = [];
+    let narray = [1, 1, 1, 1, 1, 1, 1, 1];
 
-    for (let i=0; i<=depth; i++)
-    {
-        narray.push(max(2**(depth-1-i),1));
-    }
-
-    let nArray = new Uint32Array([1,1,1,1,1,1,1]);
     let pipelineValue = 1;
     let ordinaryValue = 1;
 
-    const { pipeline_Face, pipeline_Edge, pipeline_Vertex, pipelines, pipeline2, pipelineAnime } = await createPipelines(device, presentationFormat);
-    const { fixedBindGroups, OrdinaryPointfixedBindGroup, OrdinaryPointBuffers, animeBindGroup, changedBindGroups } = await changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer, connectivityStorageBuffers, pipelines, pipeline2, pipelineAnime, myString, settings, depth);
-
+    const { pipeline_Face, pipeline_Edge, pipeline_Vertex, pipelines, pipeline2, pipelineAnime, xyzPipeline } = await createPipelines(device, presentationFormat);
+    
     async function render(now) {
         now *= 0.001;  // convert to seconds
         const deltaTime = now - then;
         then = now;
 
         const startTime = performance.now();
+
+        if(settings.getProterty('animation'))
+        {
+            Base_Vertex = new Float32Array(animationBase['Base_Vertex'+String(parseInt(  now*100%100  )).padStart(2, '0')]);
+        }
+
+        let Base_Vertex_Buffer = device.createBuffer({
+            label: 'Base_Vertex_Buffer',
+            size : levelsize,
+            usage : GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
+        });
+        device.queue.writeBuffer(Base_Vertex_Buffer, 0, Base_Vertex);
+        
+        const { fixedBindGroups, OrdinaryPointfixedBindGroup, OrdinaryPointBuffers, animeBindGroup, changedBindGroups } 
+            = await changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer, displacementBuffer, texture, sampler, connectivityStorageBuffers, pipelines, pipeline2
+                , pipelineAnime, myString, settings, depth);
+        // const { fixedBindGroups, OrdinaryPointfixedBindGroup, OrdinaryPointBuffers, animeBindGroup, changedBindGroups } 
+        //     = await changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer, connectivityStorageBuffers, pipelines, pipeline2
+        //         , pipelineAnime, myString, settings, depth);
+
+        const { indices, texcoordDatas, indexBuffers, vertexBuffers } = createBuffers(device, depth);
 
         const canvasTexture = context.getCurrentTexture();
         renderPassDescriptor.colorAttachments[0].view = canvasTexture.createView();
@@ -272,6 +402,7 @@ async function main() {
         mat4.multiply(camera.getProjectionMatrix(), camera.getViewMatrix(), matrixValue);
 
         keyValue = settings.getProterty('moveSpeed');
+        viewValue[0] = 0; viewValue[1] = 0; viewValue[2] = -50; viewValue[3] = 1;
         timeValue[0] = now;
         wrieValue[0] = settings.getProterty('wireAdjust');
 
@@ -297,8 +428,8 @@ async function main() {
         }
 
         // base_vertex_buffer 갱신
-        
-        const encoder3 = device.createCommandEncoder({ label : 'encoder',});
+
+        const encoder3 = device.createCommandEncoder({ label : 'encoder3',});
 
         let computePassData = [];
 
@@ -306,32 +437,32 @@ async function main() {
         {
             computePassData.push({prefix: '_'+(i), bindGroup_Face: bindGroups[i].bindGroup_Face, bindGroup_Edge: bindGroups[i].bindGroup_Edge, bindGroup_Vertex: bindGroups[i].bindGroup_Vertex});
         }
-        
+
         for (const data of computePassData) {
             const prefix = data.prefix;
             const bindGroup_Face = data.bindGroup_Face;
             const bindGroup_Edge = data.bindGroup_Edge;
             const bindGroup_Vertex = data.bindGroup_Vertex;
-        
+
             const pass_Face = encoder3.beginComputePass();
             pass_Face.setPipeline(pipeline_Face);
             pass_Face.setBindGroup(0, bindGroup_Face);
             pass_Face.dispatchWorkgroups(65535);
             pass_Face.end();
-        
+
             const pass_Edge = encoder3.beginComputePass();
             pass_Edge.setPipeline(pipeline_Edge);
             pass_Edge.setBindGroup(0, bindGroup_Edge);
             pass_Edge.dispatchWorkgroups(65535);
             pass_Edge.end();
-        
+
             const pass_Vertex = encoder3.beginComputePass();
             pass_Vertex.setPipeline(pipeline_Vertex);
             pass_Vertex.setBindGroup(0, bindGroup_Vertex);
             pass_Vertex.dispatchWorkgroups(65535);
             pass_Vertex.end();
         }
-        encoder3.copyBufferToBuffer(Base_Vertex_Buffer, 0, Base_Vertex_Read_Buffer, 0, Base_Vertex_Buffer.size);
+        // encoder3.copyBufferToBuffer(Base_Vertex_Buffer, 0, Base_Vertex_Read_Buffer, 0, Base_Vertex_Buffer.size);
         const commandBuffer3 = encoder3.finish();
         device.queue.submit([commandBuffer3]);
 
@@ -358,28 +489,20 @@ async function main() {
         const encoder2 = device.createCommandEncoder();
         const pass = encoder2.beginRenderPass(renderPassDescriptor);
 
-        switch (settings.getProterty('tesselation'))
+        let tesselation = parseInt(settings.getProterty('tesselation'));
+        for (let i=0; i<=depth; i++)
         {
-            case 0: case 1:  nArray = new Uint32Array([1, 1, 1, 1, 1, 1, 1]); break;
-            case 2: nArray = new Uint32Array([2, 1, 1, 1, 1, 1, 1]); break;
-            case 3: nArray = new Uint32Array([4, 2, 1, 1, 1, 1, 1]); break;
-            case 4: nArray = new Uint32Array([8, 4, 2, 1, 1, 1, 1]); break;
-            case 5: nArray = new Uint32Array([16, 8, 4, 2, 1, 1, 1]); break;
-            case 6: nArray = new Uint32Array([32, 16, 8, 4, 2, 1, 1]); break;
-            case 7: nArray = new Uint32Array([64, 32, 16, 8, 4, 2, 1]); break;
-
+            if(tesselation > depth)
+                tesselation = depth;
+            narray[i] = max(2**(tesselation-i),1);
         }
-
-        const { indices, texcoordDatas, indexBuffers, vertexBuffers } = createBuffers(device, nArray, depth);
-
+        
+        let N = depth - tesselation;
+        if(N <= 0) N = 0;
         for (let i = 0; i <= depth; i++) {
-            device.queue.writeBuffer(vertexBuffers[i], 0, texcoordDatas[i]);
-            device.queue.writeBuffer(indexBuffers[i], 0, indices[i]);
+            device.queue.writeBuffer(vertexBuffers[N][i], 0, texcoordDatas[N][i]);
+            device.queue.writeBuffer(indexBuffers[N][i], 0, indices[N][i]);
         }
-        // if(settings.getProterty('pipelineSetting') == 'V')         pipelineValue = 0;
-        // else if(settings.pipelineValue[0] < 2.0)    pipelineValue = 1;
-        // else if(settings.pipelineValue[0] < 3.0)    pipelineValue = 2;
-
         switch (settings.getProterty('pipelineSetting'))
         {
             case 'V': pipelineValue = 0; break;
@@ -391,11 +514,12 @@ async function main() {
         pass.setBindGroup(0, fixedBindGroups[pipelineValue]);
         for (let i = 0; i <= depth; i++) {
             pass.setBindGroup(1, changedBindGroups[i+(depth+1)*pipelineValue]);
-            pass.setVertexBuffer(0, vertexBuffers[i]);
-            pass.setIndexBuffer(indexBuffers[i], 'uint32');
-            if(settings.getProterty('draw')[i] == true && i <= settings.getProterty('ordinaryLevel')){
-                let j = i < 4 ? i : 4;
-                pass.drawIndexed(nArray[i] * nArray[i] * 6,  j * 2 * 1000 + 100000);
+            pass.setVertexBuffer(0, vertexBuffers[N][i]);
+            pass.setIndexBuffer(indexBuffers[N][i], 'uint32');
+            if(settings.getProterty('draw')[i] == true) {
+                let j = i;
+                if (i > 4); j = 4;
+                pass.drawIndexed(narray[i] * narray[i] * 6,  j * 2 * 1000 + 100000);
             }
         }
         ordinaryValue = settings.getProterty('ordinaryLevel');
@@ -443,8 +567,8 @@ async function main() {
 
     const observer = new ResizeObserver(entries => {
         for (const entry of entries) {
-            const canvas = entry.target;
-            const aspectRatio = 16 / 9;  // 고정된 비율 (예: 16:9)
+        const canvas = entry.target;
+        const aspectRatio = 16 / 9;  // 고정된 비율 (예: 16:9)
 
             let width, height;
 
@@ -477,7 +601,6 @@ async function main() {
             canvas.height = Math.max(1, Math.min(Math.round(height), device.limits.maxTextureDimension2D));
         }
     });
-
     observer.observe(canvas);
 }
 
