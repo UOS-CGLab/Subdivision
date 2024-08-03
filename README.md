@@ -14,3 +14,10 @@ GUI 개선완료
 그림자 수정 해야함.
 
 https://uos-cglab.github.io/Subdivision
+
+
+24.08.04
+코드 대대적인 수정 필요
+
+https://github.com/UOS-CGLab/WebGPU-with-Cpp 중 src/Application.h, src/Applicaion2.cpp에 예시를 만들어 놓았으니 확인 부탁.
+
