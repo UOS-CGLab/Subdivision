@@ -1,6 +1,6 @@
 import {createFVertices} from './createFVertices.js';
 
-export function createBufferData(device, obj, level) {
+export function createBufferData(device, obj, level, limit) {
     const vertex_F = new Int32Array(obj[level].data.f_indices);
     const offset_F = new Int32Array(obj[level].data.f_offsets);
     const valance_F = new Int32Array(obj[level].data.f_valances);
@@ -17,6 +17,8 @@ export function createBufferData(device, obj, level) {
 
     const size = vertex_F.byteLength*4 + vertex_E.byteLength*4 + vertex_V.byteLength*4;
 
+
+
     // Create buffers for face, edge, and vertex data
     const vertex_Buffer_F = device.createBuffer({size: vertex_F.byteLength, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST});
     const offset_Buffer_F = device.createBuffer({size: offset_F.byteLength, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST});
@@ -31,6 +33,7 @@ export function createBufferData(device, obj, level) {
     const valance_Buffer_V = device.createBuffer({size: valance_V.byteLength, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST});
     const index_Buffer_V = device.createBuffer({size: index_V.byteLength, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST});
     const pointIdx_Buffer_V = device.createBuffer({size: pointIdx_V.byteLength, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST});
+
 
     // Write data to buffers
     device.queue.writeBuffer(vertex_Buffer_F, 0, vertex_F);
@@ -47,6 +50,11 @@ export function createBufferData(device, obj, level) {
     device.queue.writeBuffer(index_Buffer_V, 0, index_V);
     device.queue.writeBuffer(pointIdx_Buffer_V, 0, pointIdx_V);
 
+    /*for limit*/
+    const limit_P = new Int32Array(limit[level].data);
+    const limit_Buffer = device.createBuffer({size: limit_P.byteLength, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST});
+    device.queue.writeBuffer(limit_Buffer, 0, limit_P);
+
     return {
         vertex_Buffer_F,
         offset_Buffer_F,
@@ -60,10 +68,11 @@ export function createBufferData(device, obj, level) {
         index_Buffer_V,
         pointIdx_Buffer_V,
         size,
+        limit_Buffer,
     };
 }
 
-export function createBindGroup(device, pipeline_Face, pipeline_Edge, pipeline_Vertex, Base_Vertex_Buffer, buffers, prefix) {
+export function createBindGroup(device, pipeline_Face, pipeline_Edge, pipeline_Vertex, Base_Vertex_Buffer, buffers, prefix, pipeline_Limit) {
     const bindGroup_Face = device.createBindGroup({
         label: `bindGroup for face${prefix}`,
         layout: pipeline_Face.getBindGroupLayout(0),
@@ -99,10 +108,21 @@ export function createBindGroup(device, pipeline_Face, pipeline_Edge, pipeline_V
         ],
     });
 
+    /*for limit*/
+    const bindGroup_Limit = device.createBindGroup({
+        label: `bindGroup for Limit`,
+        layout: pipeline_Limit.getBindGroupLayout(0),
+        entries: [
+            {binding: 0, resource: {buffer: Base_Vertex_Buffer}},
+            {binding: 1, resource: {buffer: buffers.limit_Buffer}}
+        ],
+    });
+
     return {
         bindGroup_Face,
         bindGroup_Edge,
-        bindGroup_Vertex
+        bindGroup_Vertex,
+        bindGroup_Limit,
     };
 }
 
