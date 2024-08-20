@@ -14,6 +14,10 @@ export function createBufferData(device, obj, level, limit) {
     const valance_V = new Int32Array(obj[level].data.v_valances);
     const index_V = new Int32Array(obj[level].data.v_index);
     const pointIdx_V = new Int32Array(obj[level].data.v_data);
+    
+    
+    
+    
 
     const size = vertex_F.byteLength*4 + vertex_E.byteLength*4 + vertex_V.byteLength*4;
 
@@ -51,9 +55,7 @@ export function createBufferData(device, obj, level, limit) {
     device.queue.writeBuffer(pointIdx_Buffer_V, 0, pointIdx_V);
 
     /*for limit*/
-    const limit_P = new Int32Array(limit[level].data);
-    const limit_Buffer = device.createBuffer({size: limit_P.byteLength, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST});
-    device.queue.writeBuffer(limit_Buffer, 0, limit_P);
+
 
     return {
         vertex_Buffer_F,
@@ -68,11 +70,10 @@ export function createBufferData(device, obj, level, limit) {
         index_Buffer_V,
         pointIdx_Buffer_V,
         size,
-        limit_Buffer,
     };
 }
 
-export function createBindGroup(device, pipeline_Face, pipeline_Edge, pipeline_Vertex, Base_Vertex_Buffer, buffers, prefix, pipeline_Limit) {
+export function createBindGroup(device, pipeline_Face, pipeline_Edge, pipeline_Vertex, Base_Vertex_Buffer, buffers, prefix) {
     const bindGroup_Face = device.createBindGroup({
         label: `bindGroup for face${prefix}`,
         layout: pipeline_Face.getBindGroupLayout(0),
@@ -108,21 +109,12 @@ export function createBindGroup(device, pipeline_Face, pipeline_Edge, pipeline_V
         ],
     });
 
-    /*for limit*/
-    const bindGroup_Limit = device.createBindGroup({
-        label: `bindGroup for Limit`,
-        layout: pipeline_Limit.getBindGroupLayout(0),
-        entries: [
-            {binding: 0, resource: {buffer: Base_Vertex_Buffer}},
-            {binding: 1, resource: {buffer: buffers.limit_Buffer}}
-        ],
-    });
+
 
     return {
         bindGroup_Face,
         bindGroup_Edge,
         bindGroup_Vertex,
-        bindGroup_Limit,
     };
 }
 
