@@ -28,8 +28,8 @@ export async function initializeWebGPU() {
 }
 
 export async function fetchData(myString) {
-    const data = await fetch('./../'+myString+'/topology.json');
-    const data2 = await fetch('./../'+myString+'/base.json');
+    const data = await fetch('./'+myString+'/topology.json'); // check if error
+    const data2 = await fetch('./'+myString+'/base.json'); // check if error
     const obj = await data.json();
     const base = await data2.json();
 
