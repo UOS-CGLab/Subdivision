@@ -10,12 +10,14 @@ import { Camera } from './src/camera.js';
 import { initializeBumpmap } from './src/bumpmap.js';
 
 const myString = "monsterfrog";
-const depth = 4;
+const depth = 2;
 
 async function main() {
     const { canvas, device, context, presentationFormat, canTimestamp } = await initializeWebGPU();
     const { obj, base, animationBase } = await fetchData(myString);
     const camera = new Camera();
+    
+
 
     /*for limit*/
     const data3 = await fetch('./'+myString+'/limit_point.json');
@@ -169,7 +171,17 @@ async function main() {
         const level = createBufferData(device, obj, i, limit);
         levelsize += level.size;
         levels.push(level);
+    
+    
     }
+
+
+    const limit_P = new Int32Array(limit[depth].data.flat());
+    console.log(limit_P);
+    const limit_Buffer = device.createBuffer({size: limit_P.byteLength, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST});
+    device.queue.writeBuffer(limit_Buffer, 0, limit_P);
+    
+
 
     let connectivityStorageBuffers = [];
 
@@ -330,6 +342,30 @@ async function main() {
         }),
     };
 
+    const renderPassDescriptor2 = {
+        label: 'load canvas renderPass',
+        colorAttachments: [
+        {
+            //view: swapChain.getCurrentTextureView(),
+            loadOp: 'load',
+            storeOp: 'store',
+        },
+        ],
+        depthStencilAttachment: {
+        // view: <- 렌더링할 때 채워집니다.
+        depthClearValue: 1.0,
+        depthLoadOp: 'load',
+        depthStoreOp: 'store',
+        },
+        ...(canTimestamp && {
+        timestampWrites: {
+            querySet,
+            beginningOfPassWriteIndex: 0,
+            endOfPassWriteIndex: 1,
+        },
+        }),
+    };
+
     let Base_Vertex = new Float32Array(base.Base_Vertex);
     let settings = initializeScene();
 
@@ -366,7 +402,7 @@ async function main() {
         
         const { fixedBindGroups, OrdinaryPointfixedBindGroup, OrdinaryPointBuffers, animeBindGroup, changedBindGroups } 
             = await changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer, displacementBuffer, texture, sampler, connectivityStorageBuffers, pipelines, pipeline2
-                , pipelineAnime, myString, settings, depth);
+                , pipelineAnime, myString, settings, depth );
         // const { fixedBindGroups, OrdinaryPointfixedBindGroup, OrdinaryPointBuffers, animeBindGroup, changedBindGroups } 
         //     = await changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer, connectivityStorageBuffers, pipelines, pipeline2
         //         , pipelineAnime, myString, settings, depth);
@@ -375,6 +411,8 @@ async function main() {
 
         const canvasTexture = context.getCurrentTexture();
         renderPassDescriptor.colorAttachments[0].view = canvasTexture.createView();
+        
+        renderPassDescriptor2.colorAttachments[0].view = canvasTexture.createView();
 
         if (!depthTexture || depthTexture.width !== canvasTexture.width || depthTexture.height !== canvasTexture.height) {
         if (depthTexture) {
@@ -387,6 +425,7 @@ async function main() {
         });
         }
         renderPassDescriptor.depthStencilAttachment.view = depthTexture.createView();
+        renderPassDescriptor2.depthStencilAttachment.view = depthTexture.createView();
 
         const degToRad = d => d * Math.PI / 180;
         // mat4.projection(canvas.clientWidth, canvas.clientHeight, 10000, matrixValue);
@@ -428,7 +467,7 @@ async function main() {
         let bindGroups = [];
         for (let i=0; i<=depth; i++) 
         {
-            bindGroups.push(createBindGroup(device, pipeline_Face, pipeline_Edge, pipeline_Vertex, Base_Vertex_Buffer, levels[i],i+1, pipeline_Limit));
+            bindGroups.push(createBindGroup(device, pipeline_Face, pipeline_Edge, pipeline_Vertex, Base_Vertex_Buffer, levels[i],i+1));
         }
 
         // base_vertex_buffer 갱신
@@ -442,8 +481,7 @@ async function main() {
             computePassData.push({prefix: '_'+(i), 
                 bindGroup_Face: bindGroups[i].bindGroup_Face, 
                 bindGroup_Edge: bindGroups[i].bindGroup_Edge, 
-                bindGroup_Vertex: bindGroups[i].bindGroup_Vertex,
-                bindGroup_Limit: bindGroups[i].bindGroup_Limit});
+                bindGroup_Vertex: bindGroups[i].bindGroup_Vertex});
         }
 
         for (const data of computePassData) {
@@ -471,37 +509,12 @@ async function main() {
             pass_Vertex.end();
         }
 
-            /*for limit*/
-        const pass_Limit = encoder3.beginComputePass();
-        const bindGroup_Limit = computePassData[depth].bindGroup_Limit;
-        pass_Limit.setPipeline(pipeline_Limit);
-        pass_Limit.setBindGroup(0, bindGroup_Limit);
-        pass_Limit.dispatchWorkgroups(65535);
-        pass_Limit.end();
 
         // encoder3.copyBufferToBuffer(Base_Vertex_Buffer, 0, Base_Vertex_Read_Buffer, 0, Base_Vertex_Buffer.size);
         const commandBuffer3 = encoder3.finish();
         device.queue.submit([commandBuffer3]);
 
-        // 새로운 버퍼 생성 (usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST)
-        const OrdinaryBuffer = device.createBuffer({
-            label: 'OrdinaryBuffer',
-            size: Base_Vertex_Buffer.size,
-            usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-        });
-        // 커맨드 엔코더 생성
-        const commandEncoder = device.createCommandEncoder();
-        // 데이터 복사를 위한 커맨드 추가
-        commandEncoder.copyBufferToBuffer(
-            Base_Vertex_Buffer, // 소스 버퍼
-            0, // 소스 오프셋
-            OrdinaryBuffer, // 대상 버퍼
-            0, // 대상 오프셋
-            Base_Vertex_Buffer.size // 복사할 데이터 크기
-        );
-        // 커맨드 제출
-        const commandBuffer4 = commandEncoder.finish();
-        device.queue.submit([commandBuffer4]);
+        
 
         const encoder2 = device.createCommandEncoder();
         const pass = encoder2.beginRenderPass(renderPassDescriptor);
@@ -539,24 +552,81 @@ async function main() {
                 pass.drawIndexed(narray[i] * narray[i] * 6,  j * 2 * 1000 + 100000);
             }
         }
+        pass.end();
+        const commandBuffer2 = encoder2.finish();
+        device.queue.submit([commandBuffer2]);
+
+
+        /*for limit*/
+            /*for limit*/
+    const bindGroup_Limit = device.createBindGroup({
+        label: `bindGroup for Limit`,
+        layout: pipeline_Limit.getBindGroupLayout(0),
+        entries: [
+            {binding: 0, resource: {buffer: Base_Vertex_Buffer}},
+            {binding: 1, resource: {buffer: limit_Buffer}}
+        ],
+    });
+
+        const encoder_limit = device.createCommandEncoder({ label : 'encoder for limit position',});
+        const pass_Limit = encoder_limit.beginComputePass();
+        pass_Limit.setPipeline(pipeline_Limit);
+        pass_Limit.setBindGroup(0, bindGroup_Limit);
+        pass_Limit.dispatchWorkgroups(65535);
+        pass_Limit.end();
+        const commandBuffer_limit = encoder_limit.finish();
+        device.queue.submit([commandBuffer_limit]);
+
+
+
+
+        // 새로운 버퍼 생성 (usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST)
+        const OrdinaryBuffer = device.createBuffer({
+            label: 'OrdinaryBuffer',
+            size: Base_Vertex_Buffer.size,
+            usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+        });
+        // 커맨드 엔코더 생성
+        const commandEncoder = device.createCommandEncoder();
+        // 데이터 복사를 위한 커맨드 추가
+        commandEncoder.copyBufferToBuffer(
+            Base_Vertex_Buffer, // 소스 버퍼
+            0, // 소스 오프셋
+            OrdinaryBuffer, // 대상 버퍼
+            0, // 대상 오프셋
+            Base_Vertex_Buffer.size // 복사할 데이터 크기
+        );
+        // 커맨드 제출draw
+        const commandBuffer4 = commandEncoder.finish();
+        device.queue.submit([commandBuffer4]);
+    
+
+
+        const encoder5 = device.createCommandEncoder();
+        const pass_2 = encoder5.beginRenderPass(renderPassDescriptor2);
+
         ordinaryValue = settings.getProterty('ordinaryLevel');
         if(ordinaryValue > depth) ordinaryValue = depth
-        pass.setPipeline(pipeline2);
-        pass.setBindGroup(0, OrdinaryPointfixedBindGroup);
-        pass.setVertexBuffer(0, OrdinaryBuffer); //base_vertex_buffer
-        pass.setIndexBuffer(OrdinaryPointBuffers[ordinaryValue], 'uint32');
-        pass.drawIndexed(OrdinaryPointBuffers[ordinaryValue].size / 4);
-        pass.end();
+        pass_2.setPipeline(pipeline2);
+        pass_2.setBindGroup(0, OrdinaryPointfixedBindGroup);
+        pass_2.setVertexBuffer(0, OrdinaryBuffer); //base_vertex_buffer
+        pass_2.setIndexBuffer(OrdinaryPointBuffers[ordinaryValue], 'uint32');
+        //pass.drawIndexed(60);
+        pass_2.drawIndexed(OrdinaryPointBuffers[ordinaryValue].size / 4);
+        pass_2.end();
+
+
+
 
         if (canTimestamp) {
-            encoder2.resolveQuerySet(querySet, 0, querySet.count, resolveBuffer, 0);
+            encoder5.resolveQuerySet(querySet, 0, querySet.count, resolveBuffer, 0);
             if (resultBuffer.mapState === 'unmapped') {
-                encoder2.copyBufferToBuffer(resolveBuffer, 0, resultBuffer, 0, resultBuffer.size);
+                encoder5.copyBufferToBuffer(resolveBuffer, 0, resultBuffer, 0, resultBuffer.size);
             }
         }
 
-        const commandBuffer2 = encoder2.finish();
-        device.queue.submit([commandBuffer2]);
+        const commandBuffer5 = encoder5.finish();
+        device.queue.submit([commandBuffer5]);
 
         if (canTimestamp && resultBuffer.mapState === 'unmapped') {
         resultBuffer.mapAsync(GPUMapMode.READ).then(() => {
