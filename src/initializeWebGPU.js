@@ -46,7 +46,7 @@ export async function fetchData(myString) {
     //     })
     //     .catch(error => console.error('Error fetching files:', error));
 
-    const animationBase = await (await fetch('./'+myString+'/animation/base.json')).json(); // check if error
+    const animationBase = await (await fetch('./'+myString+'/animation/base.json')).json(); // check if error 
     // for(let i=0; i<=99; i++)
     // {
     //     animationBase.push(await (await fetch('./../'+myString+'/animation/base'+String(i).padStart(2, '0')+'.json')).json());
