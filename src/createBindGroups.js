@@ -1,6 +1,6 @@
 import {createFVertices} from './createFVertices.js';
 
-export function createBufferData(device, obj, level) {
+export function createBufferData(device, obj, level, limit) {
     const vertex_F = new Int32Array(obj[level].data.f_indices);
     const offset_F = new Int32Array(obj[level].data.f_offsets);
     const valance_F = new Int32Array(obj[level].data.f_valances);
@@ -14,8 +14,14 @@ export function createBufferData(device, obj, level) {
     const valance_V = new Int32Array(obj[level].data.v_valances);
     const index_V = new Int32Array(obj[level].data.v_index);
     const pointIdx_V = new Int32Array(obj[level].data.v_data);
+    
+    
+    
+    
 
     const size = vertex_F.byteLength*4 + vertex_E.byteLength*4 + vertex_V.byteLength*4;
+
+
 
     // Create buffers for face, edge, and vertex data
     const vertex_Buffer_F = device.createBuffer({size: vertex_F.byteLength, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST});
@@ -32,6 +38,7 @@ export function createBufferData(device, obj, level) {
     const index_Buffer_V = device.createBuffer({size: index_V.byteLength, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST});
     const pointIdx_Buffer_V = device.createBuffer({size: pointIdx_V.byteLength, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST});
 
+
     // Write data to buffers
     device.queue.writeBuffer(vertex_Buffer_F, 0, vertex_F);
     device.queue.writeBuffer(offset_Buffer_F, 0, offset_F);
@@ -46,6 +53,9 @@ export function createBufferData(device, obj, level) {
     device.queue.writeBuffer(valance_Buffer_V, 0, valance_V);
     device.queue.writeBuffer(index_Buffer_V, 0, index_V);
     device.queue.writeBuffer(pointIdx_Buffer_V, 0, pointIdx_V);
+
+    /*for limit*/
+
 
     return {
         vertex_Buffer_F,
@@ -99,10 +109,12 @@ export function createBindGroup(device, pipeline_Face, pipeline_Edge, pipeline_V
         ],
     });
 
+
+
     return {
         bindGroup_Face,
         bindGroup_Edge,
-        bindGroup_Vertex
+        bindGroup_Vertex,
     };
 }
 

@@ -99,6 +99,38 @@ export async function createPipelines(device, presentationFormat) {
         }
         `
     });
+    /*for limit*/ 
+    const module_Limit = device.createShaderModule({
+        code: `
+        @group(0) @binding(0) var<storage, read_write> baseVertex: array<f32>;
+        @group(0) @binding(1) var<storage, read> limitData: array<i32>;
+
+
+        @compute @workgroup_size(256) 
+        fn compute_LimitPoint(@builtin(global_invocation_id) global_invocation_id: vec3<u32>){
+        let id = global_invocation_id.x;
+        let limitIdx= limitData[id*9];
+
+        var limPos = vec3(baseVertex[4*limitIdx], baseVertex[4*limitIdx+1], baseVertex[4*limitIdx+2]);
+
+
+        let edge_sum_X = baseVertex[4*limitData[id*9+1]] + baseVertex[4*limitData[id*9+3]] + baseVertex[4*limitData[id*9+5]] + baseVertex[4*limitData[id*9+7]];
+        let edge_sum_Y = baseVertex[4*limitData[id*9+1]+1] + baseVertex[4*limitData[id*9+3]+1] + baseVertex[4*limitData[id*9+5]+1] + baseVertex[4*limitData[id*9+7]+1];
+        let edge_sum_Z = baseVertex[4*limitData[id*9+1]+2] + baseVertex[4*limitData[id*9+3]+2] + baseVertex[4*limitData[id*9+5]+2] + baseVertex[4*limitData[id*9+7]+2];
+        
+        let face_sum_X = baseVertex[4*limitData[id*9+2]] + baseVertex[4*limitData[id*9+4]] + baseVertex[4*limitData[id*9+6]] + baseVertex[4*limitData[id*9+8]];
+        let face_sum_Y = baseVertex[4*limitData[id*9+2]+1] + baseVertex[4*limitData[id*9+4]+1] + baseVertex[4*limitData[id*9+6]+1] + baseVertex[4*limitData[id*9+8]+1];
+        let face_sum_Z = baseVertex[4*limitData[id*9+2]+2] + baseVertex[4*limitData[id*9+4]+2] + baseVertex[4*limitData[id*9+6]+2] + baseVertex[4*limitData[id*9+8]+2];
+
+        baseVertex[limitIdx*4] = ((4*limPos.x) + edge_sum_X + (face_sum_X/4))/9;
+        baseVertex[limitIdx*4+1] = ((4*limPos.y) + edge_sum_Y + (face_sum_Y/4))/9;
+        baseVertex[limitIdx*4+2] = ((4*limPos.z) + edge_sum_Z + (face_sum_Z/4))/9;
+        baseVertex[limitIdx*4+3] = 0;
+
+
+        }
+        `
+    });
 
     const pipeline_Face = device.createComputePipeline({
         label: 'Face Point Compute Pipeline',
@@ -124,6 +156,16 @@ export async function createPipelines(device, presentationFormat) {
         compute: {
             module: module_Vertex,
             entryPoint: 'compute_VertexPoint',
+        },
+    });
+
+    /*for Limit*/
+    const pipeline_Limit = device.createComputePipeline({
+        label: 'Limit Point Compute Pipeline',
+        layout: 'auto',
+        compute: {
+            module: module_Limit,
+            entryPoint: 'compute_LimitPoint',
         },
     });
 
@@ -586,5 +628,5 @@ export async function createPipelines(device, presentationFormat) {
         },
     });
 
-    return { pipeline_Face, pipeline_Edge, pipeline_Vertex, pipelines, pipeline2, pipelineAnime, xyzPipeline };
+    return { pipeline_Face, pipeline_Edge, pipeline_Vertex, pipelines, pipeline2, pipelineAnime, xyzPipeline, pipeline_Limit};
 }

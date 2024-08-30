@@ -17,6 +17,10 @@ async function main() {
     const { obj, base, animationBase } = await fetchData(myString);
     const camera = new Camera();
 
+    /*for limit*/
+    const data3 = await fetch('./'+myString+'/limit_point.json');
+    const limit = await data3.json();
+
     const { displacementBuffer, texture, sampler } = initializeBumpmap(device, myString);
 
     const uniformBufferSize = (24) * 4;
@@ -162,7 +166,7 @@ async function main() {
 
     for (let i=0; i<=depth; i++)
     {
-        const level = createBufferData(device, obj, i);
+        const level = createBufferData(device, obj, i, limit);
         levelsize += level.size;
         levels.push(level);
     }
@@ -339,7 +343,7 @@ async function main() {
     let pipelineValue = 1;
     let ordinaryValue = 1;
 
-    const { pipeline_Face, pipeline_Edge, pipeline_Vertex, pipelines, pipeline2, pipelineAnime, xyzPipeline } = await createPipelines(device, presentationFormat);
+    const { pipeline_Face, pipeline_Edge, pipeline_Vertex, pipelines, pipeline2, pipelineAnime, xyzPipeline, pipeline_Limit} = await createPipelines(device, presentationFormat);
     
     async function render(now) {
         now *= 0.001;  // convert to seconds
@@ -424,7 +428,7 @@ async function main() {
         let bindGroups = [];
         for (let i=0; i<=depth; i++) 
         {
-            bindGroups.push(createBindGroup(device, pipeline_Face, pipeline_Edge, pipeline_Vertex, Base_Vertex_Buffer,levels[i],i+1));
+            bindGroups.push(createBindGroup(device, pipeline_Face, pipeline_Edge, pipeline_Vertex, Base_Vertex_Buffer, levels[i],i+1, pipeline_Limit));
         }
 
         // base_vertex_buffer 갱신
@@ -435,7 +439,11 @@ async function main() {
 
         for (let i=0; i<=depth; i++)
         {
-            computePassData.push({prefix: '_'+(i), bindGroup_Face: bindGroups[i].bindGroup_Face, bindGroup_Edge: bindGroups[i].bindGroup_Edge, bindGroup_Vertex: bindGroups[i].bindGroup_Vertex});
+            computePassData.push({prefix: '_'+(i), 
+                bindGroup_Face: bindGroups[i].bindGroup_Face, 
+                bindGroup_Edge: bindGroups[i].bindGroup_Edge, 
+                bindGroup_Vertex: bindGroups[i].bindGroup_Vertex,
+                bindGroup_Limit: bindGroups[i].bindGroup_Limit});
         }
 
         for (const data of computePassData) {
@@ -462,6 +470,15 @@ async function main() {
             pass_Vertex.dispatchWorkgroups(65535);
             pass_Vertex.end();
         }
+
+            /*for limit*/
+        const pass_Limit = encoder3.beginComputePass();
+        const bindGroup_Limit = computePassData[depth].bindGroup_Limit;
+        pass_Limit.setPipeline(pipeline_Limit);
+        pass_Limit.setBindGroup(0, bindGroup_Limit);
+        pass_Limit.dispatchWorkgroups(65535);
+        pass_Limit.end();
+
         // encoder3.copyBufferToBuffer(Base_Vertex_Buffer, 0, Base_Vertex_Read_Buffer, 0, Base_Vertex_Buffer.size);
         const commandBuffer3 = encoder3.finish();
         device.queue.submit([commandBuffer3]);
