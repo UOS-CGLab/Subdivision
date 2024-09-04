@@ -1,7 +1,7 @@
 export async function createPipelines(device, presentationFormat) {
 
     const module_Face = device.createShaderModule({
-        code: `
+        code: /*wgsl*/ `
         @group(0) @binding(0) var<storage, read> vertex_F: array<i32>;
         @group(0) @binding(1) var<storage, read> offset_F: array<i32>;
         @group(0) @binding(2) var<storage, read> valance_F: array<i32>;
@@ -35,7 +35,7 @@ export async function createPipelines(device, presentationFormat) {
     });
 
     const module_Edge = device.createShaderModule({
-        code: `
+        code: /*wgsl*/ `
         @group(0) @binding(0) var<storage, read> vertex_E: array<i32>;
         @group(0) @binding(1) var<storage, read> pointIdx_E: array<i32>;
         @group(0) @binding(2) var<storage, read_write> baseVertex: array<f32>;
@@ -65,7 +65,7 @@ export async function createPipelines(device, presentationFormat) {
     });
 
     const module_Vertex = device.createShaderModule({
-        code: `
+        code: /*wgsl*/ `
         @group(0) @binding(0) var<storage, read> vertex_V: array<i32>;
         @group(0) @binding(1) var<storage, read> offset_V: array<i32>;
         @group(0) @binding(2) var<storage, read> valance_V: array<i32>;
@@ -102,7 +102,7 @@ export async function createPipelines(device, presentationFormat) {
     
     /*for limit*/ 
     const module_Limit = device.createShaderModule({
-        code: `
+        code: /*wgsl*/ `
         @group(0) @binding(0) var<storage, read_write> baseVertex: array<f32>;
         @group(0) @binding(1) var<storage, read> limitData: array<i32>;
 
@@ -171,8 +171,7 @@ export async function createPipelines(device, presentationFormat) {
     });
 
     const module1 = device.createShaderModule({
-        code: 
-        `
+        code: /*wgsl*/ `
         struct Uniforms {
             matrix: mat4x4f,
             view: vec3f,
@@ -339,7 +338,7 @@ export async function createPipelines(device, presentationFormat) {
             }
             else
             {
-                vsOut.position = uni.matrix * vec4f(p*5 - normal*(textureValue.x-0.5)*30, 1);
+                vsOut.position = uni.matrix * vec4f(p*5 - normal*(textureValue.x-0.5)*40, 1);
             }
 
             vsOut.center = vec3f(vert.position.xy, 0);
@@ -385,7 +384,7 @@ export async function createPipelines(device, presentationFormat) {
     });
 
     const module2 = device.createShaderModule({
-        code: `
+        code: /*wgsl*/ `
         struct Uniforms {
             matrix: mat4x4f,
             view: vec3f,
@@ -448,7 +447,7 @@ export async function createPipelines(device, presentationFormat) {
     });
 
     const moduleAnime = device.createShaderModule({
-        code: `
+        code: /*wgsl*/ `
         struct Uniforms {
             matrix: mat4x4f,
             view: vec3f,
@@ -611,7 +610,7 @@ export async function createPipelines(device, presentationFormat) {
 
     const xyzModule = device.createShaderModule({
         label: 'xyz module',
-        code: `
+        code: /*wgsl*/ `
             struct OurVertexShaderOutput {
                 @builtin(position) position: vec4f,
                 @location(0) color: vec4f,
