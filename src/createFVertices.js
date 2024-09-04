@@ -6,28 +6,29 @@ export async function createFVertices(folderName, depth) {
 
     const basePath = `./`+folderName;
 
-    // let preVertexCubeData;
-    // try {
-    //     const coordResponse = await fetch(`${basePath}/coord.txt`);
-    //     const coordData = await coordResponse.text();
-    //     const coordArray = coordData.split(',').map(parseFloat);
-    //     preVertexCubeData = new Float32Array(coordArray);
-    // } catch (error) {
-    //     console.error('Error fetching coord.txt:', error);
-    //     return;
-    // }
-
-    // const vertexCubeData = preVertexCubeData;
-
     let preConnectivityData = [];
+    let preBaseUVData = [];
     try {
         const patchResponse = await fetch(`${basePath}/patch.txt`);
         const patchData = await patchResponse.text();
         const subArrays = patchData.split('-');
         subArrays.forEach((subArray, index) => {
-            const dataArray = subArray.split(',').map(parseFloat);
-            // preConnectivityData[index] = new Uint32Array(dataArray);
-            preConnectivityData.push(new Uint32Array(dataArray));
+            const preDataArray = subArray.split(',').map(parseFloat);
+            let dataArray1 = [];
+            let dataArray2 = [];
+            for(let i=0; i<preDataArray.length; i++)
+            {
+                if(((i >> 3) % 3) == 2)
+                {
+                    dataArray2.push(preDataArray[i]);
+                }
+                else
+                {
+                    dataArray1.push(preDataArray[i])
+                }
+            }
+            preConnectivityData.push(new Uint32Array(dataArray1));
+            preBaseUVData.push(new Float32Array(dataArray2));
         });
     } catch (error) {
         console.error('Error fetching patch.txt:', error);
@@ -35,39 +36,43 @@ export async function createFVertices(folderName, depth) {
     }
 
     let preOrdinaryPointData = [];
+    let preExtraBaseUVData = [];
     try {
         for(let i=0; i<=depth; i++)
         {
             const extraOrdinaryResponse = await fetch(`${basePath}/extra_ordinary`+i+`.txt`);
             const extraOrdinaryData = await extraOrdinaryResponse.text();
-            const ordinaryArray = extraOrdinaryData.split(',').map(parseFloat);
-            preOrdinaryPointData.push(new Uint32Array(ordinaryArray));
+            const preDataArray = extraOrdinaryData.split(',').map(parseFloat);
+            let dataArray1 = [];
+            let dataArray2 = [];
+            for(let i=0; i<preDataArray.length; i++)
+            {
+                if((parseInt(i / 6) % 3) == 0)
+                {
+                    dataArray1.push(preDataArray[i]);
+                }
+                else
+                {
+                    dataArray2.push(preDataArray[i])
+                }
+            }
+            preOrdinaryPointData.push(new Uint32Array(dataArray1));
+            preExtraBaseUVData.push(new Float32Array(dataArray2));
         }
     } catch (error) {
         console.error('Error fetching extra_ordinary.txt:', error);
         return;
     }
 
-    // let preOrdinaryPointData;
-    // try {
-    //     // for(let i=0; i<depth; i++)
-    //     {
-    //         const extraOrdinaryResponse = await fetch(`${basePath}/extra_ordinary.txt`);
-    //         const extraOrdinaryData = await extraOrdinaryResponse.text();
-    //         const ordinaryArray = extraOrdinaryData.split(',').map(parseFloat);
-    //         preOrdinaryPointData = (new Uint32Array(ordinaryArray));
-    //     }
-    // } catch (error) {
-    //     console.error('Error fetching extra_ordinary.txt:', error);
-    //     return;
-    // }
-
-    const OrdinaryPointData = preOrdinaryPointData;
-
     const connectivitys = preConnectivityData;
+    const base_UV = preBaseUVData;
+    const OrdinaryPointData = preOrdinaryPointData;
+    const extra_base_UV = preExtraBaseUVData;
 
     return {
         connectivitys,
+        base_UV,
         OrdinaryPointData,
+        extra_base_UV,
     };
 }

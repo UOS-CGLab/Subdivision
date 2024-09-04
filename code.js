@@ -9,21 +9,23 @@ import { createBuffers } from './src/makeBuffer.js';
 import { Camera } from './src/camera.js';
 import { initializeBumpmap } from './src/bumpmap.js';
 
+// const myString = "chest";
+// const myString = "grass_block2"
 const myString = "monsterfrog";
-const depth = 2;
+const depth = 4;
 
 async function main() {
     const { canvas, device, context, presentationFormat, canTimestamp } = await initializeWebGPU();
     const { obj, base, animationBase } = await fetchData(myString);
     const camera = new Camera();
-    
+
 
 
     /*for limit*/
     const data3 = await fetch('./'+myString+'/limit_point.json');
     const limit = await data3.json();
 
-    const { displacementBuffer, texture, sampler } = initializeBumpmap(device, myString);
+    const { displacementBuffer, texture, sampler } = await initializeBumpmap(device, myString);
 
     const uniformBufferSize = (24) * 4;
     const uniformBuffer = device.createBuffer({
@@ -161,39 +163,62 @@ async function main() {
         }
     }
 
-    const { connectivitys, OrdinaryPointData } = await createFVertices(myString, depth);
+    const { connectivitys, base_UV, OrdinaryPointData, extra_base_UV } = await createFVertices(myString, depth);
 
     let levels = [];
     let levelsize = 0;
 
     for (let i=0; i<=depth; i++)
-    {
-        const level = createBufferData(device, obj, i, limit);
-        levelsize += level.size;
-        levels.push(level);
+        {
+            const level = createBufferData(device, obj, i, limit);
+            levelsize += level.size;
+            levels.push(level);
+        
+        
+        }
     
     
-    }
+        const limit_P = new Int32Array(limit[depth].data.flat());
+        console.log(limit_P);
+        const limit_Buffer = device.createBuffer({size: limit_P.byteLength, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST});
+        device.queue.writeBuffer(limit_Buffer, 0, limit_P);
 
-
-    const limit_P = new Int32Array(limit[depth].data.flat());
-    console.log(limit_P);
-    const limit_Buffer = device.createBuffer({size: limit_P.byteLength, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST});
-    device.queue.writeBuffer(limit_Buffer, 0, limit_P);
+        
     
-
-
     let connectivityStorageBuffers = [];
-
     for (let i=0; i<=depth; i++)
     {
         const connectivityStorageBuffer = device.createBuffer({
-            label: 'storage buffer vertices',
+            label: 'connectivity buffer vertices',
             size: connectivitys[i].byteLength,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
         });
         device.queue.writeBuffer(connectivityStorageBuffer, 0, connectivitys[i]);
         connectivityStorageBuffers.push(connectivityStorageBuffer);
+    }
+
+    let base_UVStorageBuffers = [];
+    for (let i=0; i<=depth; i++)
+    {
+        const base_UVStorageBuffer = device.createBuffer({
+            label: 'base_UV buffer vertices',
+            size: base_UV[i].byteLength,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+        });
+        device.queue.writeBuffer(base_UVStorageBuffer, 0, base_UV[i]);
+        base_UVStorageBuffers.push(base_UVStorageBuffer);
+    }
+
+    let extra_base_UVStorageBuffers = [];
+    for (let i=0; i<=depth; i++)
+    {
+        const extra_base_UVStorageBuffer = device.createBuffer({
+            label: 'extra_base_UV buffer vertices',
+            size: extra_base_UV[i].byteLength,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+        });
+        device.queue.writeBuffer(extra_base_UVStorageBuffer, 0, extra_base_UV[i]);
+        extra_base_UVStorageBuffers.push(extra_base_UVStorageBuffer);
     }
 
     // async function getPickedVertexIndex(ndcX, ndcY) {
@@ -379,7 +404,7 @@ async function main() {
     let pipelineValue = 1;
     let ordinaryValue = 1;
 
-    const { pipeline_Face, pipeline_Edge, pipeline_Vertex, pipelines, pipeline2, pipelineAnime, xyzPipeline, pipeline_Limit} = await createPipelines(device, presentationFormat);
+    const { pipeline_Face, pipeline_Edge, pipeline_Vertex, pipelines, pipeline2, pipelineAnime, xyzPipeline, pipeline_Limit } = await createPipelines(device, presentationFormat);
     
     async function render(now) {
         now *= 0.001;  // convert to seconds
@@ -401,17 +426,14 @@ async function main() {
         device.queue.writeBuffer(Base_Vertex_Buffer, 0, Base_Vertex);
         
         const { fixedBindGroups, OrdinaryPointfixedBindGroup, OrdinaryPointBuffers, animeBindGroup, changedBindGroups } 
-            = await changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer, displacementBuffer, texture, sampler, connectivityStorageBuffers, pipelines, pipeline2
-                , pipelineAnime, myString, settings, depth );
-        // const { fixedBindGroups, OrdinaryPointfixedBindGroup, OrdinaryPointBuffers, animeBindGroup, changedBindGroups } 
-        //     = await changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer, connectivityStorageBuffers, pipelines, pipeline2
-        //         , pipelineAnime, myString, settings, depth);
+            = await changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer, displacementBuffer, texture, sampler, 
+                connectivityStorageBuffers, base_UVStorageBuffers, OrdinaryPointData, extra_base_UVStorageBuffers, 
+                pipelines, pipeline2, pipelineAnime, depth);
 
         const { indices, texcoordDatas, indexBuffers, vertexBuffers } = createBuffers(device, depth);
 
         const canvasTexture = context.getCurrentTexture();
         renderPassDescriptor.colorAttachments[0].view = canvasTexture.createView();
-        
         renderPassDescriptor2.colorAttachments[0].view = canvasTexture.createView();
 
         if (!depthTexture || depthTexture.width !== canvasTexture.width || depthTexture.height !== canvasTexture.height) {
@@ -508,13 +530,11 @@ async function main() {
             pass_Vertex.dispatchWorkgroups(65535);
             pass_Vertex.end();
         }
-
-
         // encoder3.copyBufferToBuffer(Base_Vertex_Buffer, 0, Base_Vertex_Read_Buffer, 0, Base_Vertex_Buffer.size);
         const commandBuffer3 = encoder3.finish();
         device.queue.submit([commandBuffer3]);
 
-        
+
 
         const encoder2 = device.createCommandEncoder();
         const pass = encoder2.beginRenderPass(renderPassDescriptor);
@@ -558,15 +578,14 @@ async function main() {
 
 
         /*for limit*/
-            /*for limit*/
-    const bindGroup_Limit = device.createBindGroup({
-        label: `bindGroup for Limit`,
-        layout: pipeline_Limit.getBindGroupLayout(0),
-        entries: [
-            {binding: 0, resource: {buffer: Base_Vertex_Buffer}},
-            {binding: 1, resource: {buffer: limit_Buffer}}
-        ],
-    });
+        const bindGroup_Limit = device.createBindGroup({
+            label: `bindGroup for Limit`,
+            layout: pipeline_Limit.getBindGroupLayout(0),
+            entries: [
+                {binding: 0, resource: {buffer: Base_Vertex_Buffer}},
+                {binding: 1, resource: {buffer: limit_Buffer}}
+            ],
+        });
 
         const encoder_limit = device.createCommandEncoder({ label : 'encoder for limit position',});
         const pass_Limit = encoder_limit.beginComputePass();
@@ -611,11 +630,9 @@ async function main() {
         pass_2.setBindGroup(0, OrdinaryPointfixedBindGroup);
         pass_2.setVertexBuffer(0, OrdinaryBuffer); //base_vertex_buffer
         pass_2.setIndexBuffer(OrdinaryPointBuffers[ordinaryValue], 'uint32');
-        //pass.drawIndexed(60);
+        // pass_2.drawIndexed(6);
         pass_2.drawIndexed(OrdinaryPointBuffers[ordinaryValue].size / 4);
         pass_2.end();
-
-
 
 
         if (canTimestamp) {

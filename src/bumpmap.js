@@ -9,10 +9,17 @@ export async function initializeBumpmap(device, myString) {
         format: 'rgba8unorm',
         usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
     });
+    device.queue.copyExternalImageToTexture(
+        { source: imageBitmap },
+        { texture: texture },
+        [imageBitmap.width, imageBitmap.height, 1]
+    );
     const textureView = texture.createView();
+
     const sampler = device.createSampler({
         magFilter: 'linear',
         minFilter: 'linear',
+        mipmapFilter: 'linear',   // MIP 맵 필터링을 선형 보간으로 설정
     });
 
     const module = device.createShaderModule({ 
@@ -54,48 +61,6 @@ export async function initializeBumpmap(device, myString) {
     });
     new Float32Array(displacementBuffer.getMappedRange()).set(floatData);
     displacementBuffer.unmap();
-    const dstBindGroup = device.createBindGroup({
-        layout: computePipeline.getBindGroupLayout(0),
-        entries: [
-            { binding: 0, resource: textureView },
-            { binding: 1, resource: { buffer: displacementBuffer } }
-        ]
-    });
-
-    const commandEncoder = device.createCommandEncoder();
-    const passEncoder = commandEncoder.beginComputePass();
-    passEncoder.setPipeline(computePipeline);
-    passEncoder.setBindGroup(0, dstBindGroup);
-    passEncoder.dispatchWorkgroups(Math.ceil(imageBitmap.width / 64), Math.ceil(imageBitmap.height / 64));
-    passEncoder.end();
-
-    device.queue.submit([commandEncoder.finish()]);
-
-    // async function readBuffer(device, buffer, bufferSize) {
-    //     // 읽기 버퍼 생성
-    //     const readBuffer = device.createBuffer({
-    //         size: bufferSize,
-    //         usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
-    //     });
-
-    //     // 커맨드 인코더 생성 및 복사 명령 추가
-    //     const commandEncoder = device.createCommandEncoder();
-    //     commandEncoder.copyBufferToBuffer(buffer, 0, readBuffer, 0, bufferSize);
-
-    //     // 커맨드 버퍼 제출 및 완료 기다림
-    //     const commandBuffer = commandEncoder.finish();
-    //     device.queue.submit([commandBuffer]);
-    //     await new Promise(resolve => setTimeout(resolve, 100));
-    //     await readBuffer.mapAsync(GPUMapMode.READ);
-    //     // 버퍼에서 데이터 읽기
-    //     const arrayBuffer = readBuffer.getMappedRange();
-    //     console.log(new Float32Array(arrayBuffer));  // 데이터를 Float32Array로 로깅
-    //     // 리소스 정리
-    //     readBuffer.unmap();
-    // }
-
-    // 함수 호출 예시 (버퍼 크기와 device를 정의해야 함)
-    // readBuffer(device, displacementBuffer, displacementBuffer.size);
  
     return { displacementBuffer, texture, sampler };
 }
