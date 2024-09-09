@@ -598,7 +598,6 @@ async function main() {
 
 
 
-
         // 새로운 버퍼 생성 (usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST)
         const OrdinaryBuffer = device.createBuffer({
             label: 'OrdinaryBuffer',
