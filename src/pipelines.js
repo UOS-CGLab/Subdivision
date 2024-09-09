@@ -1,7 +1,7 @@
 export async function createPipelines(device, presentationFormat) {
 
     const module_Face = device.createShaderModule({
-        code: /*wgsl*/ `
+        code: `
         @group(0) @binding(0) var<storage, read> vertex_F: array<i32>;
         @group(0) @binding(1) var<storage, read> offset_F: array<i32>;
         @group(0) @binding(2) var<storage, read> valance_F: array<i32>;
@@ -35,7 +35,7 @@ export async function createPipelines(device, presentationFormat) {
     });
 
     const module_Edge = device.createShaderModule({
-        code: /*wgsl*/ `
+        code: `
         @group(0) @binding(0) var<storage, read> vertex_E: array<i32>;
         @group(0) @binding(1) var<storage, read> pointIdx_E: array<i32>;
         @group(0) @binding(2) var<storage, read_write> baseVertex: array<f32>;
@@ -65,7 +65,7 @@ export async function createPipelines(device, presentationFormat) {
     });
 
     const module_Vertex = device.createShaderModule({
-        code: /*wgsl*/ `
+        code: `
         @group(0) @binding(0) var<storage, read> vertex_V: array<i32>;
         @group(0) @binding(1) var<storage, read> offset_V: array<i32>;
         @group(0) @binding(2) var<storage, read> valance_V: array<i32>;
@@ -102,7 +102,7 @@ export async function createPipelines(device, presentationFormat) {
     
     /*for limit*/ 
     const module_Limit = device.createShaderModule({
-        code: /*wgsl*/ `
+        code: `
         @group(0) @binding(0) var<storage, read_write> baseVertex: array<f32>;
         @group(0) @binding(1) var<storage, read> limitData: array<i32>;
 
@@ -114,18 +114,27 @@ export async function createPipelines(device, presentationFormat) {
 
         var limPos = vec3(baseVertex[4*limitIdx], baseVertex[4*limitIdx+1], baseVertex[4*limitIdx+2]);
 
+        let e0 = vec3(baseVertex[4*limitData[id*9+1]],baseVertex[4*limitData[id*9+1]+1],baseVertex[4*limitData[id*9+1]+2]);
+        let e1 = vec3(baseVertex[4*limitData[id*9+3]],baseVertex[4*limitData[id*9+3]+1],baseVertex[4*limitData[id*9+3]+2]);
+        let e2 = vec3(baseVertex[4*limitData[id*9+5]],baseVertex[4*limitData[id*9+5]+1],baseVertex[4*limitData[id*9+5]+2]);
+        let e3 = vec3(baseVertex[4*limitData[id*9+7]],baseVertex[4*limitData[id*9+7]+1],baseVertex[4*limitData[id*9+7]+2]);
 
-        let edge_sum_X = baseVertex[4*limitData[id*9+1]] + baseVertex[4*limitData[id*9+3]] + baseVertex[4*limitData[id*9+5]] + baseVertex[4*limitData[id*9+7]];
-        let edge_sum_Y = baseVertex[4*limitData[id*9+1]+1] + baseVertex[4*limitData[id*9+3]+1] + baseVertex[4*limitData[id*9+5]+1] + baseVertex[4*limitData[id*9+7]+1];
-        let edge_sum_Z = baseVertex[4*limitData[id*9+1]+2] + baseVertex[4*limitData[id*9+3]+2] + baseVertex[4*limitData[id*9+5]+2] + baseVertex[4*limitData[id*9+7]+2];
         
-        let face_sum_X = baseVertex[4*limitData[id*9+2]] + baseVertex[4*limitData[id*9+4]] + baseVertex[4*limitData[id*9+6]] + baseVertex[4*limitData[id*9+8]];
-        let face_sum_Y = baseVertex[4*limitData[id*9+2]+1] + baseVertex[4*limitData[id*9+4]+1] + baseVertex[4*limitData[id*9+6]+1] + baseVertex[4*limitData[id*9+8]+1];
-        let face_sum_Z = baseVertex[4*limitData[id*9+2]+2] + baseVertex[4*limitData[id*9+4]+2] + baseVertex[4*limitData[id*9+6]+2] + baseVertex[4*limitData[id*9+8]+2];
+        let f0 = vec3(baseVertex[4*limitData[id*9+2]],baseVertex[4*limitData[id*9+2]+1],baseVertex[4*limitData[id*9+2]+2]);
+        let f1 = vec3(baseVertex[4*limitData[id*9+4]],baseVertex[4*limitData[id*9+4]+1],baseVertex[4*limitData[id*9+4]+2]);
+        let f2 = vec3(baseVertex[4*limitData[id*9+6]],baseVertex[4*limitData[id*9+6]+1],baseVertex[4*limitData[id*9+6]+2]);
+        let f3 = vec3(baseVertex[4*limitData[id*9+8]],baseVertex[4*limitData[id*9+8]+1],baseVertex[4*limitData[id*9+8]+2]);
 
-        baseVertex[limitIdx*4] = ((4*limPos.x) + edge_sum_X + (face_sum_X/4))/9;
-        baseVertex[limitIdx*4+1] = ((4*limPos.y) + edge_sum_Y + (face_sum_Y/4))/9;
-        baseVertex[limitIdx*4+2] = ((4*limPos.z) + edge_sum_Z + (face_sum_Z/4))/9;
+        let edge_sum = e0+e1+e2+e3;
+        let face_sum = f0+f1+f2+f3;
+
+        let c2 = 4*(e0-e2)+f0-f1-f2+f3;
+        let c3 = 4*(e1-e3)+f1-f2-f3+f0;
+        let normal = cross(c2,c3);
+
+        baseVertex[limitIdx*4] = ((4*limPos.x) + edge_sum.x + (face_sum.x/4))/9;
+        baseVertex[limitIdx*4+1] = ((4*limPos.y) + edge_sum.y + (face_sum.y/4))/9;
+        baseVertex[limitIdx*4+2] = ((4*limPos.z) + edge_sum.z + (face_sum.z/4))/9;
         baseVertex[limitIdx*4+3] = 0;
 
 
@@ -338,7 +347,7 @@ export async function createPipelines(device, presentationFormat) {
             }
             else
             {
-                vsOut.position = uni.matrix * vec4f(p*5 - normal*(textureValue.x-0.5)*40, 1);
+                vsOut.position = uni.matrix * vec4f(p*5 - normal*(textureValue.x-0.5)*30, 1);
             }
 
             vsOut.center = vec3f(vert.position.xy, 0);
@@ -384,7 +393,7 @@ export async function createPipelines(device, presentationFormat) {
     });
 
     const module2 = device.createShaderModule({
-        code: /*wgsl*/ `
+        code:/*wgsl*/ `
         struct Uniforms {
             matrix: mat4x4f,
             view: vec3f,
@@ -610,7 +619,7 @@ export async function createPipelines(device, presentationFormat) {
 
     const xyzModule = device.createShaderModule({
         label: 'xyz module',
-        code: /*wgsl*/ `
+        code: `
             struct OurVertexShaderOutput {
                 @builtin(position) position: vec4f,
                 @location(0) color: vec4f,
