@@ -1,7 +1,7 @@
 export async function createPipelines(device, presentationFormat) {
 
     const module_Face = device.createShaderModule({
-        code: `
+        code: /*wgsl*/ `
         @group(0) @binding(0) var<storage, read> vertex_F: array<i32>;
         @group(0) @binding(1) var<storage, read> offset_F: array<i32>;
         @group(0) @binding(2) var<storage, read> valance_F: array<i32>;
@@ -35,7 +35,7 @@ export async function createPipelines(device, presentationFormat) {
     });
 
     const module_Edge = device.createShaderModule({
-        code: `
+        code: /*wgsl*/ `
         @group(0) @binding(0) var<storage, read> vertex_E: array<i32>;
         @group(0) @binding(1) var<storage, read> pointIdx_E: array<i32>;
         @group(0) @binding(2) var<storage, read_write> baseVertex: array<f32>;
@@ -65,7 +65,7 @@ export async function createPipelines(device, presentationFormat) {
     });
 
     const module_Vertex = device.createShaderModule({
-        code: `
+        code: /*wgsl*/ `
         @group(0) @binding(0) var<storage, read> vertex_V: array<i32>;
         @group(0) @binding(1) var<storage, read> offset_V: array<i32>;
         @group(0) @binding(2) var<storage, read> valance_V: array<i32>;
@@ -102,7 +102,7 @@ export async function createPipelines(device, presentationFormat) {
     
     /*for limit*/ 
     const module_Limit = device.createShaderModule({
-        code: `
+        code: /*wgsl*/ `
         @group(0) @binding(0) var<storage, read_write> baseVertex: array<f32>;
         @group(0) @binding(1) var<storage, read> limitData: array<i32>;
 
@@ -339,16 +339,16 @@ export async function createPipelines(device, presentationFormat) {
             let texCoordInt = vec2i(  i32(uv.x*512.0),  i32((1-uv.y)*512.0)  );
             let textureValue = textureLoad(u_earthbump1k, texCoordInt, 0); // textureLoad 뽑아내면 될듯
 
-            // vsOut.position = uni.matrix * vec4f(p*5, 1);
+            vsOut.position = uni.matrix * vec4f(p*5, 1);
             // vsOut.position = uni.matrix * (vec4f(p*5, 1) + vec4f());
-            if(textureValue.x-0.5 < 0)
-            {
-                vsOut.position = uni.matrix * vec4f(p*5, 1);
-            }
-            else
-            {
-                vsOut.position = uni.matrix * vec4f(p*5 - normal*(textureValue.x-0.5)*30, 1);
-            }
+            // if(textureValue.x-0.5 < 0)
+            // {
+            //     vsOut.position = uni.matrix * vec4f(p*5, 1);
+            // }
+            // else
+            // {
+            //     vsOut.position = uni.matrix * vec4f(p*5 - normal*(textureValue.x-0.5)*40, 1);
+            // }
 
             vsOut.center = vec3f(vert.position.xy, 0);
             vsOut.texcoord = vec2f(uv.x, 1-uv.y);
@@ -387,13 +387,19 @@ export async function createPipelines(device, presentationFormat) {
             // }
             // return vsOut.color;
             return temp;
-            // return vec4f(vsOut.texcoord, 0, 1);
+            return vec4f(vsOut.texcoord, 0, 1);
         }
         `,
     });
 
-    const module2 = device.createShaderModule({
-        code:/*wgsl*/ `
+
+
+    // extra 
+
+
+
+    const module2 = device.createShaderModule({                 
+        code: /*wgsl*/ `
         struct Uniforms {
             matrix: mat4x4f,
             view: vec3f,
@@ -416,6 +422,7 @@ export async function createPipelines(device, presentationFormat) {
         @group(0) @binding(2) var<storage, read> extra_base_UV: array<vec2f>;
         @group(0) @binding(3) var u_earthbump1k: texture_2d<f32>;
         @group(0) @binding(4) var sampler0: sampler;
+        @group(0) @binding(5) var<storage, read> base_vertex: array<vec4f>;
 
         @vertex fn vs(
             @builtin(instance_index) instanceIndex: u32,
@@ -428,29 +435,53 @@ export async function createPipelines(device, presentationFormat) {
             _ = extra_base_UV[0].x;
             _ = u_earthbump1k;
             _ = sampler0;
+            _ = extra_index_storage_buffer[0];
+            _ = base_vertex[0].x;
+            _ = uni.matrix[0];
             
-            let patchImageHighX = vec2f(   vert.position.y *extra_base_UV[  1  ])
-                                + vec2f((1-vert.position.y)*extra_base_UV[  0  ]);
-            let patchImageLowX  = vec2f(   vert.position.y *extra_base_UV[  5  ]) 
-                                + vec2f((1-vert.position.y)*extra_base_UV[  2  ]);
+            // let patchImageHighX = vec2f(   vert.position.y *extra_base_UV[  1  ])
+            //                     + vec2f((1-vert.position.y)*extra_base_UV[  0  ]);
+            // let patchImageLowX  = vec2f(   vert.position.y *extra_base_UV[  5  ]) 
+            //                     + vec2f((1-vert.position.y)*extra_base_UV[  2  ]);
 
             // let uv              = vec2f(   vert.position.x *patchImageLowX) 
             //                     + vec2f((1-vert.position.x)*patchImageHighX);
-            let uv = vec2f(extra_base_UV[ extra_index_storage_buffer[ vertexIndex ]  ]);
+            // let uv = vec2f(extra_base_UV[ extra_index_storage_buffer[ vertexIndex % 6625 ]  ]);
+            // let uv = vec2f(extra_base_UV[ instanceIndex ]);
+            let uv = array<vec2f, 6>(
+                vec2f(extra_base_UV[instanceIndex*6+0]), // 0
+                vec2f(extra_base_UV[instanceIndex*6+1]), // 1 
+                vec2f(extra_base_UV[instanceIndex*6+2]), // 2
+                vec2f(extra_base_UV[instanceIndex*6+3]), // 2
+                vec2f(extra_base_UV[instanceIndex*6+4]), // 1
+                vec2f(extra_base_UV[instanceIndex*6+5]), // 3
+            );
             
-            let p = vert.position.xyz;
-            vsOut.texcoord = uv;
+            // let p = vert.position.xyz;
+            vsOut.texcoord = vec2f(uv[vertexIndex].x, 1-uv[vertexIndex].y);
 
-            // vsOut.position = uni.matrix * vec4f(p*250, 1);
-            vsOut.position = uni.matrix * vec4f(p*5, 1);         
+            // let p = extra_index_storage_buffer[  instanceIndex*4  ].xyz;
+            let p = array(
+                vec3f(base_vertex[extra_index_storage_buffer[instanceIndex*6+0]].xyz),
+                vec3f(base_vertex[extra_index_storage_buffer[instanceIndex*6+1]].xyz),
+                vec3f(base_vertex[extra_index_storage_buffer[instanceIndex*6+2]].xyz),
+                vec3f(base_vertex[extra_index_storage_buffer[instanceIndex*6+3]].xyz),
+                vec3f(base_vertex[extra_index_storage_buffer[instanceIndex*6+4]].xyz),
+                vec3f(base_vertex[extra_index_storage_buffer[instanceIndex*6+5]].xyz),
+            );
+
+            // vsOut.position = uni.matrix * vec4f(p*5, 1);         
+            vsOut.position = uni.matrix * vec4f(p[vertexIndex]*5, 1);
+            vsOut.color = vec4f(p[vertexIndex], 1.0);
             return vsOut;
         }
 
         @fragment fn fs(vsOut: VSOutput) -> @location(0) vec4f {
             let temp = textureSample(u_earthbump1k, sampler0, vsOut.texcoord); // textureLoad 뽑아내면 될듯
-            // return temp;
-            return vec4f(vsOut.texcoord, 0, 1);
+            return temp;
+            // return vec4f(vsOut.texcoord, 0, 1);
             // return vec4f(0.5, 0, 0, 1);
+            // return vsOut.color;
         }
         `,
     });
@@ -598,7 +629,7 @@ export async function createPipelines(device, presentationFormat) {
             targets: [{ format: presentationFormat }],
         },
         primitive: {
-            topology: 'line-list',
+            // topology: 'line-list',
             listIndexFormat: 'uint32',
         },
         depthStencil: {
@@ -619,7 +650,7 @@ export async function createPipelines(device, presentationFormat) {
 
     const xyzModule = device.createShaderModule({
         label: 'xyz module',
-        code: `
+        code: /*wgsl*/ `
             struct OurVertexShaderOutput {
                 @builtin(position) position: vec4f,
                 @location(0) color: vec4f,

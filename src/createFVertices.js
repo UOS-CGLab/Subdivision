@@ -55,6 +55,14 @@ export async function createFVertices(folderName, depth) {
                 {
                     dataArray2.push(preDataArray[i])
                 }
+                // else if(i >= 12 && i <= 15)
+                // {
+                //     continue;
+                // }
+                // else
+                // {
+                //     dataArray2.push(preDataArray[i]);
+                // }
             }
             preOrdinaryPointData.push(new Uint32Array(dataArray1));
             preExtraBaseUVData.push(new Float32Array(dataArray2));

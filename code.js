@@ -97,7 +97,7 @@ async function main() {
     {
         camera.moveForward(ev.deltaY*0.1);
     }
-    canvas.onmousedown = function(ev) 
+    canvas.onmousedown = function(ev)
     {
         if(spaceCheck == 0)
         {
@@ -115,7 +115,7 @@ async function main() {
             let rect = canvas.getBoundingClientRect();
             let x = (ev.clientX - rect.left) / canvas.clientWidth * 2 - 1; // NDC X
             let y = -(ev.clientY - rect.top) / canvas.clientHeight * 2 + 1; // NDC Y
-        
+
             // 포인트 선택 로직
             getPickedVertexIndex(x, y).then(index => {
                 if (index !== null) {
@@ -127,7 +127,7 @@ async function main() {
     }
     canvas.onmouseup = function(ev) { dragging = false; selectedPointIndex = null; };
     canvas.onmousemove = function(ev)
-    {    
+    {
         if(spaceCheck == 0)
         {
             let x = ev.clientX;
@@ -156,7 +156,7 @@ async function main() {
                 let rect = canvas.getBoundingClientRect();
                 let x = (ev.clientX - rect.left) / canvas.clientWidth * 2 - 1; // NDC X
                 let y = -(ev.clientY - rect.top) / canvas.clientHeight * 2 + 1; // NDC Y
-        
+
                 // 포인트 위치 업데이트 로직
                 updatePointPosition(selectedPointIndex, x, y);
             }
@@ -173,18 +173,12 @@ async function main() {
             const level = createBufferData(device, obj, i, limit);
             levelsize += level.size;
             levels.push(level);
-        
-        
-        }
-    
-    
-        const limit_P = new Int32Array(limit[depth].data.flat());
-        console.log(limit_P);
-        const limit_Buffer = device.createBuffer({size: limit_P.byteLength, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST});
-        device.queue.writeBuffer(limit_Buffer, 0, limit_P);
 
-        
-    
+
+        }
+
+
+
     let connectivityStorageBuffers = [];
     for (let i=0; i<=depth; i++)
     {
@@ -226,33 +220,33 @@ async function main() {
     //         struct VertexBuffer {
     //             vertices: array<vec4<f32>>,
     //         };
-    
+
     //         struct MouseBuffer {
     //             mousePos: vec2<f32>,
     //         };
-    
+
     //         @group(0) @binding(0) var<storage, read> vertexBuffer: VertexBuffer;
     //         @group(0) @binding(1) var<uniform> mouseBuffer: MouseBuffer;
     //         @group(0) @binding(2) var<storage, read_write> pickedIndex: atomic<u32>;
-    
+
     //         @compute @workgroup_size(64)
     //         fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     //             let idx = global_id.x;
     //             let vertex = vertexBuffer.vertices[idx];
-                
+
     //             let dist = distance(vertex.xy, mouseBuffer.mousePos);
-                
+
     //             // 원자적 최소값 계산을 사용하여 가장 가까운 버텍스 인덱스를 갱신
     //             atomicMin(&pickedIndex, u32(dist * 1000.0));
     //         }
     //     `;
-    
+
     //     const mouseBuffer = device.createBuffer({
     //         size: 8,
     //         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
     //     });
     //     device.queue.writeBuffer(mouseBuffer, 0, new Float32Array([ndcX, ndcY]));
-    
+
     //     const storageIndexBuffer = device.createBuffer({
     //         size: 4,
     //         usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
@@ -262,11 +256,11 @@ async function main() {
     //         usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
     //     });
     //     device.queue.writeBuffer(storageIndexBuffer, 0, new Uint32Array([0xFFFFFFFF]));
-    
+
     //     const computeModule = device.createShaderModule({
     //         code: computeShaderCode,
     //     });
-    
+
     //     const computePipelineLayout = device.createPipelineLayout({
     //         bindGroupLayouts: [
     //             device.createBindGroupLayout({
@@ -278,7 +272,7 @@ async function main() {
     //             })
     //         ]
     //     });
-    
+
     //     const computePipeline = device.createComputePipeline({
     //         layout: computePipelineLayout,
     //         compute: {
@@ -286,7 +280,7 @@ async function main() {
     //             entryPoint: 'main',
     //         },
     //     });
-    
+
     //     const bindGroup = device.createBindGroup({
     //         layout: computePipeline.getBindGroupLayout(0),
     //         entries: [
@@ -295,7 +289,7 @@ async function main() {
     //             { binding: 2, resource: { buffer: storageIndexBuffer }}
     //         ]
     //     });
-    
+
     //     const commandEncoder = device.createCommandEncoder();
     //     const passEncoder = commandEncoder.beginComputePass();
     //     passEncoder.setPipeline(computePipeline);
@@ -306,12 +300,12 @@ async function main() {
 
     //     const commandBuffer = commandEncoder.finish();
     //     device.queue.submit([commandBuffer]);
-    
+
     //     await readIndexBuffer.mapAsync(GPUMapMode.READ);
     //     const indexData = new Uint32Array(readIndexBuffer.getMappedRange());
     //     const pickedIndex = indexData[0];
     //     readIndexBuffer.unmap();
-    
+
     //     return pickedIndex;
     // }
 
@@ -405,7 +399,7 @@ async function main() {
     let ordinaryValue = 1;
 
     const { pipeline_Face, pipeline_Edge, pipeline_Vertex, pipelines, pipeline2, pipelineAnime, xyzPipeline, pipeline_Limit } = await createPipelines(device, presentationFormat);
-    
+
     async function render(now) {
         now *= 0.001;  // convert to seconds
         const deltaTime = now - then;
@@ -424,11 +418,11 @@ async function main() {
             usage : GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
         });
         device.queue.writeBuffer(Base_Vertex_Buffer, 0, Base_Vertex);
-        
-        const { fixedBindGroups, OrdinaryPointfixedBindGroup, OrdinaryPointBuffers, animeBindGroup, changedBindGroups } 
-            = await changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer, displacementBuffer, texture, sampler, 
-                connectivityStorageBuffers, base_UVStorageBuffers, OrdinaryPointData, extra_base_UVStorageBuffers, 
-                pipelines, pipeline2, pipelineAnime, depth);
+
+        const { fixedBindGroups, OrdinaryPointfixedBindGroup, OrdinaryPointBuffers, animeBindGroup, changedBindGroups }
+            = await changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer, displacementBuffer, texture, sampler,
+                connectivityStorageBuffers, base_UVStorageBuffers, OrdinaryPointData, extra_base_UVStorageBuffers,
+                pipelines, pipeline2, pipelineAnime, depth, settings);
 
         const { indices, texcoordDatas, indexBuffers, vertexBuffers } = createBuffers(device, depth);
 
@@ -487,7 +481,7 @@ async function main() {
         device.queue.submit([commandBuffer]);
 
         let bindGroups = [];
-        for (let i=0; i<=depth; i++) 
+        for (let i=0; i<=depth; i++)
         {
             bindGroups.push(createBindGroup(device, pipeline_Face, pipeline_Edge, pipeline_Vertex, Base_Vertex_Buffer, levels[i],i+1));
         }
@@ -500,9 +494,9 @@ async function main() {
 
         for (let i=0; i<=depth; i++)
         {
-            computePassData.push({prefix: '_'+(i), 
-                bindGroup_Face: bindGroups[i].bindGroup_Face, 
-                bindGroup_Edge: bindGroups[i].bindGroup_Edge, 
+            computePassData.push({prefix: '_'+(i),
+                bindGroup_Face: bindGroups[i].bindGroup_Face,
+                bindGroup_Edge: bindGroups[i].bindGroup_Edge,
                 bindGroup_Vertex: bindGroups[i].bindGroup_Vertex});
         }
 
@@ -546,7 +540,7 @@ async function main() {
                 tesselation = depth;
             narray[i] = max(2**(tesselation-i),1);
         }
-        
+
         let N = depth - tesselation;
         if(N <= 0) N = 0;
         for (let i = 0; i <= depth; i++) {
@@ -570,11 +564,17 @@ async function main() {
                 let j = i;
                 if (i > 4); j = 4;
                 pass.drawIndexed(narray[i] * narray[i] * 6,  j * 2 * 1000 + 100000);
+                // pass.drawIndexed(narray[i] * narray[i] * 6, 1);
             }
         }
         pass.end();
         const commandBuffer2 = encoder2.finish();
         device.queue.submit([commandBuffer2]);
+
+
+        const limit_P = new Int32Array(limit[settings.getProterty('ordinaryLevel')].data.flat());
+        const limit_Buffer = device.createBuffer({size: limit_P.byteLength, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST});
+        device.queue.writeBuffer(limit_Buffer, 0, limit_P);
 
 
         /*for limit*/
@@ -597,6 +597,13 @@ async function main() {
         device.queue.submit([commandBuffer_limit]);
 
 
+        
+
+        // 여기 사이
+
+
+
+
 
         // 새로운 버퍼 생성 (usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST)
         const OrdinaryBuffer = device.createBuffer({
@@ -617,7 +624,7 @@ async function main() {
         // 커맨드 제출draw
         const commandBuffer4 = commandEncoder.finish();
         device.queue.submit([commandBuffer4]);
-    
+
 
 
         const encoder5 = device.createCommandEncoder();
@@ -627,12 +634,12 @@ async function main() {
         if(ordinaryValue > depth) ordinaryValue = depth
         pass_2.setPipeline(pipeline2);
         pass_2.setBindGroup(0, OrdinaryPointfixedBindGroup);
-        pass_2.setVertexBuffer(0, OrdinaryBuffer); //base_vertex_buffer
-        pass_2.setIndexBuffer(OrdinaryPointBuffers[ordinaryValue], 'uint32');
-        // pass_2.drawIndexed(6);
-        pass_2.drawIndexed(OrdinaryPointBuffers[ordinaryValue].size / 4);
+        pass_2.setVertexBuffer(0, OrdinaryBuffer); //base_vertex_buffer, 1,1,1,1,1,1
+        // pass_2.setIndexBuffer(OrdinaryPointBuffers[ordinaryValue], 'uint32'); // 1, 2, 3, 3, 2, 4
+        pass_2.draw(6, OrdinaryPointBuffers[ordinaryValue].size / 24); // 4byte * 6vertex
+        // pass_2.draw(6, 1); // 4byte * 6vertex
+        // pass_2.drawIndexed(OrdinaryPointBuffers[ordinaryValue].size / 4); //6000
         pass_2.end();
-
 
         if (canTimestamp) {
             encoder5.resolveQuerySet(querySet, 0, querySet.count, resolveBuffer, 0);

@@ -28,12 +28,12 @@ export async function initializeWebGPU() {
 }
 
 export async function fetchData(myString) {
-    const data = await fetch('./'+myString+'/topology.json'); //need to fix
-    const data2 = await fetch('./'+myString+'/base.json'); // need to fix
+    const data = await fetch('./../'+myString+'/topology.json');
+    const data2 = await fetch('./../'+myString+'/base.json');
     const obj = await data.json();
     const base = await data2.json();
 
-    const animationBase = await (await fetch('./'+myString+'/animation/base.json')).json(); // need to fifx
+    const animationBase = await (await fetch('./../'+myString+'/animation/base.json')).json();
 
     return { obj, base, animationBase };
 }
