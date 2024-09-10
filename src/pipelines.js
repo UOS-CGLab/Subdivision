@@ -339,16 +339,15 @@ export async function createPipelines(device, presentationFormat) {
             let texCoordInt = vec2i(  i32(uv.x*512.0),  i32((1-uv.y)*512.0)  );
             let textureValue = textureLoad(u_earthbump1k, texCoordInt, 0); // textureLoad 뽑아내면 될듯
 
-            vsOut.position = uni.matrix * vec4f(p*5, 1);
-            // vsOut.position = uni.matrix * (vec4f(p*5, 1) + vec4f());
-            // if(textureValue.x-0.5 < 0)
-            // {
-            //     vsOut.position = uni.matrix * vec4f(p*5, 1);
-            // }
-            // else
-            // {
-            //     vsOut.position = uni.matrix * vec4f(p*5 - normal*(textureValue.x-0.5)*40, 1);
-            // }
+            // vsOut.position = uni.matrix * vec4f(p*5, 1);
+            if(textureValue.x-0.5 < 0)
+            {
+                vsOut.position = uni.matrix * vec4f(p*5, 1);
+            }
+            else
+            {
+                vsOut.position = uni.matrix * vec4f(p*5 - normal*(textureValue.x-0.5)*20, 1);
+            }
 
             vsOut.center = vec3f(vert.position.xy, 0);
             vsOut.texcoord = vec2f(uv.x, 1-uv.y);
@@ -387,7 +386,7 @@ export async function createPipelines(device, presentationFormat) {
             // }
             // return vsOut.color;
             return temp;
-            return vec4f(vsOut.texcoord, 0, 1);
+            // return vec4f(vsOut.texcoord, 0, 1);
         }
         `,
     });
@@ -423,6 +422,7 @@ export async function createPipelines(device, presentationFormat) {
         @group(0) @binding(3) var u_earthbump1k: texture_2d<f32>;
         @group(0) @binding(4) var sampler0: sampler;
         @group(0) @binding(5) var<storage, read> base_vertex: array<vec4f>;
+        @group(0) @binding(6) var<storage, read> base_normal: array<vec4f>;
 
         @vertex fn vs(
             @builtin(instance_index) instanceIndex: u32,
@@ -431,7 +431,7 @@ export async function createPipelines(device, presentationFormat) {
         ) -> VSOutput {
             var vsOut: VSOutput;
             
-
+            _ = base_normal[0].x;
             _ = extra_base_UV[0].x;
             _ = u_earthbump1k;
             _ = sampler0;
@@ -439,40 +439,25 @@ export async function createPipelines(device, presentationFormat) {
             _ = base_vertex[0].x;
             _ = uni.matrix[0];
             
-            // let patchImageHighX = vec2f(   vert.position.y *extra_base_UV[  1  ])
-            //                     + vec2f((1-vert.position.y)*extra_base_UV[  0  ]);
-            // let patchImageLowX  = vec2f(   vert.position.y *extra_base_UV[  5  ]) 
-            //                     + vec2f((1-vert.position.y)*extra_base_UV[  2  ]);
-
-            // let uv              = vec2f(   vert.position.x *patchImageLowX) 
-            //                     + vec2f((1-vert.position.x)*patchImageHighX);
-            // let uv = vec2f(extra_base_UV[ extra_index_storage_buffer[ vertexIndex % 6625 ]  ]);
-            // let uv = vec2f(extra_base_UV[ instanceIndex ]);
-            let uv = array<vec2f, 6>(
-                vec2f(extra_base_UV[instanceIndex*6+0]), // 0
-                vec2f(extra_base_UV[instanceIndex*6+1]), // 1 
-                vec2f(extra_base_UV[instanceIndex*6+2]), // 2
-                vec2f(extra_base_UV[instanceIndex*6+3]), // 2
-                vec2f(extra_base_UV[instanceIndex*6+4]), // 1
-                vec2f(extra_base_UV[instanceIndex*6+5]), // 3
-            );
+            let uv = extra_base_UV[instanceIndex*6+vertexIndex];
+            vsOut.texcoord = vec2f(uv.x, 1-uv.y);
+            let texCoordInt = vec2i(  i32(uv.x*512.0),  i32((1-uv.y)*512.0)  );
+            let textureValue = textureLoad(u_earthbump1k, texCoordInt, 0); // textureLoad 뽑아내면 될듯
             
             // let p = vert.position.xyz;
-            vsOut.texcoord = vec2f(uv[vertexIndex].x, 1-uv[vertexIndex].y);
+            let p = vec3f(base_vertex[extra_index_storage_buffer[instanceIndex*6+vertexIndex]].xyz);
 
-            // let p = extra_index_storage_buffer[  instanceIndex*4  ].xyz;
-            let p = array(
-                vec3f(base_vertex[extra_index_storage_buffer[instanceIndex*6+0]].xyz),
-                vec3f(base_vertex[extra_index_storage_buffer[instanceIndex*6+1]].xyz),
-                vec3f(base_vertex[extra_index_storage_buffer[instanceIndex*6+2]].xyz),
-                vec3f(base_vertex[extra_index_storage_buffer[instanceIndex*6+3]].xyz),
-                vec3f(base_vertex[extra_index_storage_buffer[instanceIndex*6+4]].xyz),
-                vec3f(base_vertex[extra_index_storage_buffer[instanceIndex*6+5]].xyz),
-            );
-
-            // vsOut.position = uni.matrix * vec4f(p*5, 1);         
-            vsOut.position = uni.matrix * vec4f(p[vertexIndex]*5, 1);
-            vsOut.color = vec4f(p[vertexIndex], 1.0);
+            // vsOut.position = uni.matrix * vec4f(p*5, 1);
+            if(textureValue.x-0.5 < 0)
+            {
+                vsOut.position = uni.matrix * vec4f(p*5, 1);
+            }
+            else
+            {
+                vsOut.position = uni.matrix * vec4f(p*5
+                     - normalize(base_normal[extra_index_storage_buffer[instanceIndex*6+vertexIndex]].xyz)*(textureValue.x-0.5)*40, 1);
+            }
+            vsOut.color = vec4f(p, 1.0);
             return vsOut;
         }
 

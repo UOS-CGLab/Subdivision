@@ -419,8 +419,14 @@ async function main() {
         });
         device.queue.writeBuffer(Base_Vertex_Buffer, 0, Base_Vertex);
 
+        let Base_Normal_Buffer = device.createBuffer({
+            label: 'Base_Normal_Buffer',
+            size : levelsize,
+            usage : GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
+        });
+
         const { fixedBindGroups, OrdinaryPointfixedBindGroup, OrdinaryPointBuffers, animeBindGroup, changedBindGroups }
-            = await changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer, displacementBuffer, texture, sampler,
+            = await changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer, Base_Normal_Buffer, displacementBuffer, texture, sampler,
                 connectivityStorageBuffers, base_UVStorageBuffers, OrdinaryPointData, extra_base_UVStorageBuffers,
                 pipelines, pipeline2, pipelineAnime, depth, settings);
 

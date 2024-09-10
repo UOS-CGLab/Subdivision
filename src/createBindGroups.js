@@ -108,7 +108,7 @@ export function createBindGroup(device, pipeline_Face, pipeline_Edge, pipeline_V
 
 
 
-export async function changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer, displacementBuffer, texture, sampler, 
+export async function changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer, Base_Normal_Buffer, displacementBuffer, texture, sampler, 
     connectivityStorageBuffers, base_UVStorageBuffers, OrdinaryPointData, extra_base_UVStorageBuffers, 
     pipelines, pipeline2, pipelineAnime, depth, settings)
 {
@@ -161,6 +161,7 @@ export async function changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer
             { binding: 3, resource: texture.createView() },
             { binding: 4, resource: sampler },
             { binding: 5, resource: { buffer: Base_Vertex_Buffer } },
+            { binding: 6, resource: { buffer: Base_Normal_Buffer } },
         ],
     });
     const animeBindGroup = device.createBindGroup({
