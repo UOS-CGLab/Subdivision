@@ -105,6 +105,8 @@ export async function createPipelines(device, presentationFormat) {
         code: /*wgsl*/ `
         @group(0) @binding(0) var<storage, read_write> baseVertex: array<f32>;
         @group(0) @binding(1) var<storage, read> limitData: array<i32>;
+        @group(0) @binding(2) var<storage, read_write> baseNormal: array<vec4f>;
+
 
 
         @compute @workgroup_size(256) 
@@ -130,13 +132,14 @@ export async function createPipelines(device, presentationFormat) {
 
         let c2 = 4*(e0-e2)+f0-f1-f2+f3;
         let c3 = 4*(e1-e3)+f1-f2-f3+f0;
-        let normal = cross(c2,c3);
+        let normal = normalize(cross(c2,c3));
 
-        baseVertex[limitIdx*4] = ((4*limPos.x) + edge_sum.x + (face_sum.x/4))/9;
-        baseVertex[limitIdx*4+1] = ((4*limPos.y) + edge_sum.y + (face_sum.y/4))/9;
-        baseVertex[limitIdx*4+2] = ((4*limPos.z) + edge_sum.z + (face_sum.z/4))/9;
+        baseVertex[limitIdx*4] = ((16*limPos.x) + 4*edge_sum.x + (face_sum.x))/36;
+        baseVertex[limitIdx*4+1] = ((16*limPos.y) + 4*edge_sum.y + (face_sum.y))/36;
+        baseVertex[limitIdx*4+2] = ((16*limPos.z) + 4*edge_sum.z + (face_sum.z))/36;
         baseVertex[limitIdx*4+3] = 0;
 
+        baseNormal[limitIdx] = vec4f(normal.xyz,1);
 
         }
         `
@@ -313,7 +316,7 @@ export async function createPipelines(device, presentationFormat) {
                     +B3(vert.position.x)*B2prime(vert.position.y)*pos2[  conn[instanceIndex*16+14].index  ].position
                     +B3(vert.position.x)*B3prime(vert.position.y)*pos2[  conn[instanceIndex*16+15].index  ].position;
 
-            let normal = normalize(  cross(  (uni.matrix*tu).xyz, (uni.matrix*tv).xyz  )  );
+            let normal = normalize(  cross(  (tu).xyz, (tv).xyz  )  );
             vsOut.normal = normal;
 
             // let imageWidth: f32 = 512;  // 예시 이미지 너비
@@ -348,7 +351,7 @@ export async function createPipelines(device, presentationFormat) {
             {
                 vsOut.position = uni.matrix * vec4f(p*5 - normal*(textureValue.x-0.5)*20, 1);
             }
-
+//
             vsOut.center = vec3f(vert.position.xy, 0);
             vsOut.texcoord = vec2f(uv.x, 1-uv.y);
 
@@ -385,8 +388,9 @@ export async function createPipelines(device, presentationFormat) {
             //     return vec4f(0, 0, 0, 1);
             // }
             // return vsOut.color;
-            return temp;
-            // return vec4f(vsOut.texcoord, 0, 1);
+            // return temp;
+            // return vec4f(vsOut.normal.xyz, 1);
+            return vec4f(vsOut.texcoord, 0, 1);
         }
         `,
     });
@@ -454,17 +458,17 @@ export async function createPipelines(device, presentationFormat) {
             }
             else
             {
-                vsOut.position = uni.matrix * vec4f(p*5
-                     - normalize(base_normal[extra_index_storage_buffer[instanceIndex*6+vertexIndex]].xyz)*(textureValue.x-0.5)*40, 1);
+                vsOut.position = uni.matrix * vec4f(p*5 + (base_normal[extra_index_storage_buffer[instanceIndex*6+vertexIndex]].xyz)*(textureValue.x-0.5)*20, 1);
             }
-            vsOut.color = vec4f(p, 1.0);
+            // vsOut.color = vec4f(-base_normal[extra_index_storage_buffer[instanceIndex*6+vertexIndex]].xyz, 1.0);
+            // vsOut.color = vec4f(base_normal[extra_index_storage_buffer[instanceIndex*6+vertexIndex]].x,0,0.0, 1.0);
             return vsOut;
         }
 
         @fragment fn fs(vsOut: VSOutput) -> @location(0) vec4f {
             let temp = textureSample(u_earthbump1k, sampler0, vsOut.texcoord); // textureLoad 뽑아내면 될듯
-            return temp;
-            // return vec4f(vsOut.texcoord, 0, 1);
+            // return temp;
+            return vec4f(vsOut.texcoord, 0, 1);
             // return vec4f(0.5, 0, 0, 1);
             // return vsOut.color;
         }
@@ -482,6 +486,7 @@ export async function createPipelines(device, presentationFormat) {
 
         @group(0) @binding(0) var<uniform> uni: Uniforms;
         @group(0) @binding(1) var<storage, read_write> baseVertex: array<f32>;
+        
 
         @compute @workgroup_size(256) fn cs(@builtin(global_invocation_id) global_invocation_id: vec3<u32>){
             let id = global_invocation_id.x;

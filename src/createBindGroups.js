@@ -169,7 +169,8 @@ export async function changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer
         layout: pipelineAnime.getBindGroupLayout(0),
         entries: [
             { binding: 0, resource: { buffer: uniformBuffer } },
-            { binding: 1, resource: { buffer: Base_Vertex_Buffer } },
+            { binding: 1, resource: { buffer: Base_Vertex_Buffer } }
+            
         ],
     });
 
