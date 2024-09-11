@@ -589,7 +589,8 @@ async function main() {
             layout: pipeline_Limit.getBindGroupLayout(0),
             entries: [
                 {binding: 0, resource: {buffer: Base_Vertex_Buffer}},
-                {binding: 1, resource: {buffer: limit_Buffer}}
+                {binding: 1, resource: {buffer: limit_Buffer}},
+                {binding: 2, resource: {buffer: Base_Normal_Buffer}}
             ],
         });
 
