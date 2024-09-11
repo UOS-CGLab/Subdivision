@@ -33,7 +33,7 @@ export async function fetchData(myString) {
     const obj = await data.json();
     const base = await data2.json();
 
-    const animationBase = await (await fetch('./src/'+myString+'/animation/base.json')).json();
+    const animationBase = await (await fetch('./'+myString+'/animation/base.json')).json();
 
     return { obj, base, animationBase };
 }
