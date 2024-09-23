@@ -1,6 +1,6 @@
 export async function initializeBumpmap(device, myString) {
     const img = document.createElement('img');
-    img.src = './'+myString+'/d.bmp';
+    img.src = './'+myString+'/d512.bmp';
     await img.decode();
     const imageBitmap = await createImageBitmap(img);
 
