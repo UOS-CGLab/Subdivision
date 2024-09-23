@@ -590,7 +590,7 @@ async function main() {
             entries: [
                 {binding: 0, resource: {buffer: Base_Vertex_Buffer}},
                 {binding: 1, resource: {buffer: limit_Buffer}},
-                {binding: 2, resource: {buffer: Base_Normal_Buffer}}
+                {binding: 2, resource: {buffer: Base_Normal_Buffer}},
             ],
         });
 
@@ -643,9 +643,8 @@ async function main() {
         pass_2.setBindGroup(0, OrdinaryPointfixedBindGroup);
         pass_2.setVertexBuffer(0, OrdinaryBuffer); //base_vertex_buffer, 1,1,1,1,1,1
         // pass_2.setIndexBuffer(OrdinaryPointBuffers[ordinaryValue], 'uint32'); // 1, 2, 3, 3, 2, 4
-        pass_2.draw(6, OrdinaryPointBuffers[ordinaryValue].size / 24); // 4byte * 6vertex
+        // pass_2.draw(6, OrdinaryPointBuffers[ordinaryValue].size / 24); // 4byte * 6vertex
         // pass_2.draw(6, 1); // 4byte * 6vertex
-        // pass_2.drawIndexed(OrdinaryPointBuffers[ordinaryValue].size / 4); //6000
         pass_2.end();
 
         if (canTimestamp) {
