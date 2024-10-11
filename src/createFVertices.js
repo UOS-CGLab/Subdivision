@@ -18,14 +18,22 @@ export async function createFVertices(folderName, depth) {
             let dataArray2 = [];
             for(let i=0; i<preDataArray.length; i++)
             {
-                if(((i >> 3) % 3) == 2)
+                if(((i >> 4) % 3) == 0)
                 {
-                    dataArray2.push(preDataArray[i]);
+                    dataArray1.push(preDataArray[i]);
                 }
                 else
                 {
-                    dataArray1.push(preDataArray[i])
+                    dataArray2.push(preDataArray[i])
                 }
+                // if(((i >> 3) % 3) == 2)
+                // {
+                //     dataArray2.push(preDataArray[i]);
+                // }
+                // else
+                // {
+                //     dataArray1.push(preDataArray[i])
+                // }
             }
             preConnectivityData.push(new Uint32Array(dataArray1));
             preBaseUVData.push(new Float32Array(dataArray2));
@@ -76,6 +84,9 @@ export async function createFVertices(folderName, depth) {
     const base_UV = preBaseUVData;
     const OrdinaryPointData = preOrdinaryPointData;
     const extra_base_UV = preExtraBaseUVData;
+
+    console.log(connectivitys);
+    console.log(base_UV);
 
     return {
         connectivitys,

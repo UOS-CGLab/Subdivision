@@ -63,6 +63,27 @@ export function createBufferData(device, obj, level, limit) {
     };
 }
 
+export function createBindGroup_PatchTexture(device, depth, pipeline_PatchTexture, connectivityStorageBuffers, base_UVStorageBuffers, 
+                                            textureBuffer, texture) {
+    let bindGroups_PatchTexture = [];
+    for(let i=0; i<=depth; i++)
+    {
+        const bindGroup_PatchTexture = device.createBindGroup({
+            label: `bindGroup for PatchTexture`,
+            layout: pipeline_PatchTexture.getBindGroupLayout(0),
+            entries: [
+                { binding: 0, resource: { buffer: connectivityStorageBuffers[i] } },
+                { binding: 1, resource: { buffer: base_UVStorageBuffers[i] } },
+                { binding: 2, resource: { buffer: textureBuffer } },
+                { binding: 3, resource: texture.createView() },
+            ],
+        });
+        bindGroups_PatchTexture.push(bindGroup_PatchTexture);
+    }
+
+    return bindGroups_PatchTexture;
+}
+
 export function createBindGroup(device, pipeline_Face, pipeline_Edge, pipeline_Vertex, Base_Vertex_Buffer, buffers, prefix) {
     const bindGroup_Face = device.createBindGroup({
         label: `bindGroup for face${prefix}`,
@@ -108,7 +129,7 @@ export function createBindGroup(device, pipeline_Face, pipeline_Edge, pipeline_V
 
 
 
-export async function changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer, Base_Normal_Buffer, displacementBuffer, texture, sampler, 
+export async function changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer, Base_Normal_Buffer, texture, sampler, textureBuffer,
     connectivityStorageBuffers, base_UVStorageBuffers, OrdinaryPointData, extra_base_UVStorageBuffers, 
     pipelines, pipeline2, pipelineAnime, depth, settings)
 {
@@ -185,6 +206,7 @@ export async function changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer
                 { binding: 1, resource: { buffer: Base_Vertex_Buffer } },
                 { binding: 2, resource: texture.createView() },
                 { binding: 3, resource: sampler },
+                { binding: 4, resource: { buffer: textureBuffer } },
             ],
         }));
         for(let j=0; j<=depth; j++)

@@ -1,5 +1,63 @@
 export async function createPipelines(device, presentationFormat) {
 
+    const module_PatchTexture = device.createShaderModule({
+        code: /*wgsl*/ `
+        @group(0) @binding(0) var<storage, read> conn: array<i32>;
+        @group(0) @binding(1) var<storage, read> base_UV: array<vec2f>;
+        @group(0) @binding(2) var<storage, read_write> textureBuffer: array<f32>;
+        @group(0) @binding(3) var object_texture: texture_2d<f32>;
+
+        @compute @workgroup_size(256)
+        fn cs(
+            @builtin(global_invocation_id) global_id : vec3<u32>
+            // @builtin(instance_index) instanceIndex: u32
+        ){
+            let instanceIndex = global_id.x;
+
+            let vertex5  = conn[instanceIndex*16+ 5];   //base_UV에 instance*16, 16개중 앞 4개
+            let vertex6  = conn[instanceIndex*16+ 6];
+            let vertex9  = conn[instanceIndex*16+ 9];
+            let vertex10 = conn[instanceIndex*16+10];
+
+            let texture5_0  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 0].x*512, (1-base_UV[instanceIndex*16 + 0].y)*512)), 0);
+            let texture5_1  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 1].x*512, (1-base_UV[instanceIndex*16 + 1].y)*512)), 0);
+            let texture5_2  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 2].x*512, (1-base_UV[instanceIndex*16 + 2].y)*512)), 0);
+            let texture5_3  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 3].x*512, (1-base_UV[instanceIndex*16 + 3].y)*512)), 0);
+            let texture6_0  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 4].x*512, (1-base_UV[instanceIndex*16 + 4].y)*512)), 0);
+            let texture6_1  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 5].x*512, (1-base_UV[instanceIndex*16 + 5].y)*512)), 0);
+            let texture6_2  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 6].x*512, (1-base_UV[instanceIndex*16 + 6].y)*512)), 0);
+            let texture6_3  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 7].x*512, (1-base_UV[instanceIndex*16 + 7].y)*512)), 0);
+            let texture9_0  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 8].x*512, (1-base_UV[instanceIndex*16 + 8].y)*512)), 0);
+            let texture9_1  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 9].x*512, (1-base_UV[instanceIndex*16 + 9].y)*512)), 0);
+            let texture9_2  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 +10].x*512, (1-base_UV[instanceIndex*16 +10].y)*512)), 0);
+            let texture9_3  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 +11].x*512, (1-base_UV[instanceIndex*16 +11].y)*512)), 0);
+            let texture10_0 = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 +12].x*512, (1-base_UV[instanceIndex*16 +12].y)*512)), 0);
+            let texture10_1 = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 +13].x*512, (1-base_UV[instanceIndex*16 +13].y)*512)), 0);
+            let texture10_2 = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 +14].x*512, (1-base_UV[instanceIndex*16 +14].y)*512)), 0);
+            let texture10_3 = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 +15].x*512, (1-base_UV[instanceIndex*16 +15].y)*512)), 0);
+    
+            let textureBuffer5  = (texture5_0.x  + texture5_1.x  + texture5_2.x  + texture5_3.x ) / 4.0;
+            let textureBuffer6  = (texture6_0.x  + texture6_1.x  + texture6_2.x  + texture6_3.x ) / 4.0;
+            let textureBuffer9  = (texture9_0.x  + texture9_1.x  + texture9_2.x  + texture9_3.x ) / 4.0;
+            let textureBuffer10 = (texture10_0.x + texture10_1.x + texture10_2.x + texture10_3.x) / 4.0;
+
+            textureBuffer[vertex5 ] = (texture5_0.x  + texture5_1.x  + texture5_2.x  + texture5_3.x ) / 4.0;
+            textureBuffer[vertex6 ] = (texture6_0.x  + texture6_1.x  + texture6_2.x  + texture6_3.x ) / 4.0;
+            textureBuffer[vertex9 ] = (texture9_0.x  + texture9_1.x  + texture9_2.x  + texture9_3.x ) / 4.0;
+            textureBuffer[vertex10] = (texture10_0.x + texture10_1.x + texture10_2.x + texture10_3.x) / 4.0;
+        }
+        `
+    })
+    
+    const pipeline_PatchTexture = device.createComputePipeline({
+        label: 'PatchTexture Compute Pipeline',
+        layout: 'auto',
+        compute: {
+            module: module_PatchTexture,
+            entryPoint: 'cs',
+        },
+    });
+
     const module_Face = device.createShaderModule({
         code: /*wgsl*/ `
         @group(0) @binding(0) var<storage, read> vertex_F: array<i32>;
@@ -202,10 +260,6 @@ export async function createPipelines(device, presentationFormat) {
             position : vec4f,
         };
 
-        struct Connectivity {
-            index: i32,
-        };
-
         struct Color {
             value: vec4f,
             zFighting: vec3f,
@@ -218,13 +272,15 @@ export async function createPipelines(device, presentationFormat) {
             @location(2) center: vec3f,
             @location(3) adjust: f32,
             @location(4) texcoord: vec2f,
+            @location(5) texcoord1: vec2f,
         };
 
         @group(0) @binding(0) var<uniform> uni: Uniforms;
-        @group(0) @binding(1) var<storage, read> pos2: array<Vertex>;
-        @group(0) @binding(2) var u_earthbump1k: texture_2d<f32>;
+        @group(0) @binding(1) var<storage, read> pos2: array<vec4f>;
+        @group(0) @binding(2) var object_texture: texture_2d<f32>;
         @group(0) @binding(3) var sampler0: sampler;
-        @group(1) @binding(0) var<storage, read> conn: array<Connectivity>;
+        @group(0) @binding(4) var<storage> textureBuffer: array<f32>;
+        @group(1) @binding(0) var<storage, read> conn: array<i32>;
         @group(1) @binding(1) var<storage, read> base_UV: array<vec2f>;
         @group(1) @binding(2) var<storage, read> color: Color;
 
@@ -257,6 +313,16 @@ export async function createPipelines(device, presentationFormat) {
             return sqrt(pow(t.x, 2)+pow(t.y, 2)+pow(t.z, 2));
         }
 
+        fn Max_of_4value(a: f32, b:f32, c:f32, d:f32) -> f32 {
+            // return max(max(a, b), max(c, d));
+            return (a + b + c + d) / 4;
+        }
+
+        fn Max_of_2value(a: f32, b:f32) -> f32 {
+            // return max(a, b);
+            return (a + b) / 2;
+        }
+
         @vertex fn vs(
             @builtin(instance_index) instanceIndex: u32,
             @builtin(vertex_index) vertexIndex: u32,
@@ -264,86 +330,259 @@ export async function createPipelines(device, presentationFormat) {
         ) -> VSOutput {
             var vsOut: VSOutput;
 
-            let p =  B0(vert.position.x)*B0(vert.position.y)*pos2[  conn[instanceIndex*16+ 0].index  ].position.xyz
-                    +B0(vert.position.x)*B1(vert.position.y)*pos2[  conn[instanceIndex*16+ 1].index  ].position.xyz
-                    +B0(vert.position.x)*B2(vert.position.y)*pos2[  conn[instanceIndex*16+ 2].index  ].position.xyz
-                    +B0(vert.position.x)*B3(vert.position.y)*pos2[  conn[instanceIndex*16+ 3].index  ].position.xyz
-                    +B1(vert.position.x)*B0(vert.position.y)*pos2[  conn[instanceIndex*16+ 4].index  ].position.xyz
-                    +B1(vert.position.x)*B1(vert.position.y)*pos2[  conn[instanceIndex*16+ 5].index  ].position.xyz
-                    +B1(vert.position.x)*B2(vert.position.y)*pos2[  conn[instanceIndex*16+ 6].index  ].position.xyz
-                    +B1(vert.position.x)*B3(vert.position.y)*pos2[  conn[instanceIndex*16+ 7].index  ].position.xyz
-                    +B2(vert.position.x)*B0(vert.position.y)*pos2[  conn[instanceIndex*16+ 8].index  ].position.xyz
-                    +B2(vert.position.x)*B1(vert.position.y)*pos2[  conn[instanceIndex*16+ 9].index  ].position.xyz
-                    +B2(vert.position.x)*B2(vert.position.y)*pos2[  conn[instanceIndex*16+10].index  ].position.xyz
-                    +B2(vert.position.x)*B3(vert.position.y)*pos2[  conn[instanceIndex*16+11].index  ].position.xyz
-                    +B3(vert.position.x)*B0(vert.position.y)*pos2[  conn[instanceIndex*16+12].index  ].position.xyz
-                    +B3(vert.position.x)*B1(vert.position.y)*pos2[  conn[instanceIndex*16+13].index  ].position.xyz
-                    +B3(vert.position.x)*B2(vert.position.y)*pos2[  conn[instanceIndex*16+14].index  ].position.xyz
-                    +B3(vert.position.x)*B3(vert.position.y)*pos2[  conn[instanceIndex*16+15].index  ].position.xyz;
+            let p =  B0(vert.position.x)*B0(vert.position.y)*pos2[  conn[instanceIndex*16+ 0]  ].xyz
+                    +B0(vert.position.x)*B1(vert.position.y)*pos2[  conn[instanceIndex*16+ 1]  ].xyz
+                    +B0(vert.position.x)*B2(vert.position.y)*pos2[  conn[instanceIndex*16+ 2]  ].xyz
+                    +B0(vert.position.x)*B3(vert.position.y)*pos2[  conn[instanceIndex*16+ 3]  ].xyz
+                    +B1(vert.position.x)*B0(vert.position.y)*pos2[  conn[instanceIndex*16+ 4]  ].xyz
+                    +B1(vert.position.x)*B1(vert.position.y)*pos2[  conn[instanceIndex*16+ 5]  ].xyz
+                    +B1(vert.position.x)*B2(vert.position.y)*pos2[  conn[instanceIndex*16+ 6]  ].xyz
+                    +B1(vert.position.x)*B3(vert.position.y)*pos2[  conn[instanceIndex*16+ 7]  ].xyz
+                    +B2(vert.position.x)*B0(vert.position.y)*pos2[  conn[instanceIndex*16+ 8]  ].xyz
+                    +B2(vert.position.x)*B1(vert.position.y)*pos2[  conn[instanceIndex*16+ 9]  ].xyz
+                    +B2(vert.position.x)*B2(vert.position.y)*pos2[  conn[instanceIndex*16+10]  ].xyz
+                    +B2(vert.position.x)*B3(vert.position.y)*pos2[  conn[instanceIndex*16+11]  ].xyz
+                    +B3(vert.position.x)*B0(vert.position.y)*pos2[  conn[instanceIndex*16+12]  ].xyz
+                    +B3(vert.position.x)*B1(vert.position.y)*pos2[  conn[instanceIndex*16+13]  ].xyz
+                    +B3(vert.position.x)*B2(vert.position.y)*pos2[  conn[instanceIndex*16+14]  ].xyz
+                    +B3(vert.position.x)*B3(vert.position.y)*pos2[  conn[instanceIndex*16+15]  ].xyz;
 
-            let tu = B0prime(vert.position.x)*B0(vert.position.y)*pos2[  conn[instanceIndex*16+ 0].index  ].position
-                    +B0prime(vert.position.x)*B1(vert.position.y)*pos2[  conn[instanceIndex*16+ 1].index  ].position
-                    +B0prime(vert.position.x)*B2(vert.position.y)*pos2[  conn[instanceIndex*16+ 2].index  ].position
-                    +B0prime(vert.position.x)*B3(vert.position.y)*pos2[  conn[instanceIndex*16+ 3].index  ].position
-                    +B1prime(vert.position.x)*B0(vert.position.y)*pos2[  conn[instanceIndex*16+ 4].index  ].position
-                    +B1prime(vert.position.x)*B1(vert.position.y)*pos2[  conn[instanceIndex*16+ 5].index  ].position
-                    +B1prime(vert.position.x)*B2(vert.position.y)*pos2[  conn[instanceIndex*16+ 6].index  ].position
-                    +B1prime(vert.position.x)*B3(vert.position.y)*pos2[  conn[instanceIndex*16+ 7].index  ].position
-                    +B2prime(vert.position.x)*B0(vert.position.y)*pos2[  conn[instanceIndex*16+ 8].index  ].position
-                    +B2prime(vert.position.x)*B1(vert.position.y)*pos2[  conn[instanceIndex*16+ 9].index  ].position
-                    +B2prime(vert.position.x)*B2(vert.position.y)*pos2[  conn[instanceIndex*16+10].index  ].position
-                    +B2prime(vert.position.x)*B3(vert.position.y)*pos2[  conn[instanceIndex*16+11].index  ].position
-                    +B3prime(vert.position.x)*B0(vert.position.y)*pos2[  conn[instanceIndex*16+12].index  ].position
-                    +B3prime(vert.position.x)*B1(vert.position.y)*pos2[  conn[instanceIndex*16+13].index  ].position
-                    +B3prime(vert.position.x)*B2(vert.position.y)*pos2[  conn[instanceIndex*16+14].index  ].position
-                    +B3prime(vert.position.x)*B3(vert.position.y)*pos2[  conn[instanceIndex*16+15].index  ].position;
+            let tu = B0prime(vert.position.x)*B0(vert.position.y)*pos2[  conn[instanceIndex*16+ 0]  ]
+                    +B0prime(vert.position.x)*B1(vert.position.y)*pos2[  conn[instanceIndex*16+ 1]  ]
+                    +B0prime(vert.position.x)*B2(vert.position.y)*pos2[  conn[instanceIndex*16+ 2]  ]
+                    +B0prime(vert.position.x)*B3(vert.position.y)*pos2[  conn[instanceIndex*16+ 3]  ]
+                    +B1prime(vert.position.x)*B0(vert.position.y)*pos2[  conn[instanceIndex*16+ 4]  ]
+                    +B1prime(vert.position.x)*B1(vert.position.y)*pos2[  conn[instanceIndex*16+ 5]  ]
+                    +B1prime(vert.position.x)*B2(vert.position.y)*pos2[  conn[instanceIndex*16+ 6]  ]
+                    +B1prime(vert.position.x)*B3(vert.position.y)*pos2[  conn[instanceIndex*16+ 7]  ]
+                    +B2prime(vert.position.x)*B0(vert.position.y)*pos2[  conn[instanceIndex*16+ 8]  ]
+                    +B2prime(vert.position.x)*B1(vert.position.y)*pos2[  conn[instanceIndex*16+ 9]  ]
+                    +B2prime(vert.position.x)*B2(vert.position.y)*pos2[  conn[instanceIndex*16+10]  ]
+                    +B2prime(vert.position.x)*B3(vert.position.y)*pos2[  conn[instanceIndex*16+11]  ]
+                    +B3prime(vert.position.x)*B0(vert.position.y)*pos2[  conn[instanceIndex*16+12]  ]
+                    +B3prime(vert.position.x)*B1(vert.position.y)*pos2[  conn[instanceIndex*16+13]  ]
+                    +B3prime(vert.position.x)*B2(vert.position.y)*pos2[  conn[instanceIndex*16+14]  ]
+                    +B3prime(vert.position.x)*B3(vert.position.y)*pos2[  conn[instanceIndex*16+15]  ];
 
-            let tv = B0(vert.position.x)*B0prime(vert.position.y)*pos2[  conn[instanceIndex*16+ 0].index  ].position
-                    +B0(vert.position.x)*B1prime(vert.position.y)*pos2[  conn[instanceIndex*16+ 1].index  ].position
-                    +B0(vert.position.x)*B2prime(vert.position.y)*pos2[  conn[instanceIndex*16+ 2].index  ].position
-                    +B0(vert.position.x)*B3prime(vert.position.y)*pos2[  conn[instanceIndex*16+ 3].index  ].position
-                    +B1(vert.position.x)*B0prime(vert.position.y)*pos2[  conn[instanceIndex*16+ 4].index  ].position
-                    +B1(vert.position.x)*B1prime(vert.position.y)*pos2[  conn[instanceIndex*16+ 5].index  ].position
-                    +B1(vert.position.x)*B2prime(vert.position.y)*pos2[  conn[instanceIndex*16+ 6].index  ].position
-                    +B1(vert.position.x)*B3prime(vert.position.y)*pos2[  conn[instanceIndex*16+ 7].index  ].position
-                    +B2(vert.position.x)*B0prime(vert.position.y)*pos2[  conn[instanceIndex*16+ 8].index  ].position
-                    +B2(vert.position.x)*B1prime(vert.position.y)*pos2[  conn[instanceIndex*16+ 9].index  ].position
-                    +B2(vert.position.x)*B2prime(vert.position.y)*pos2[  conn[instanceIndex*16+10].index  ].position
-                    +B2(vert.position.x)*B3prime(vert.position.y)*pos2[  conn[instanceIndex*16+11].index  ].position
-                    +B3(vert.position.x)*B0prime(vert.position.y)*pos2[  conn[instanceIndex*16+12].index  ].position
-                    +B3(vert.position.x)*B1prime(vert.position.y)*pos2[  conn[instanceIndex*16+13].index  ].position
-                    +B3(vert.position.x)*B2prime(vert.position.y)*pos2[  conn[instanceIndex*16+14].index  ].position
-                    +B3(vert.position.x)*B3prime(vert.position.y)*pos2[  conn[instanceIndex*16+15].index  ].position;
+            let tv = B0(vert.position.x)*B0prime(vert.position.y)*pos2[  conn[instanceIndex*16+ 0]  ]
+                    +B0(vert.position.x)*B1prime(vert.position.y)*pos2[  conn[instanceIndex*16+ 1]  ]
+                    +B0(vert.position.x)*B2prime(vert.position.y)*pos2[  conn[instanceIndex*16+ 2]  ]
+                    +B0(vert.position.x)*B3prime(vert.position.y)*pos2[  conn[instanceIndex*16+ 3]  ]
+                    +B1(vert.position.x)*B0prime(vert.position.y)*pos2[  conn[instanceIndex*16+ 4]  ]
+                    +B1(vert.position.x)*B1prime(vert.position.y)*pos2[  conn[instanceIndex*16+ 5]  ]
+                    +B1(vert.position.x)*B2prime(vert.position.y)*pos2[  conn[instanceIndex*16+ 6]  ]
+                    +B1(vert.position.x)*B3prime(vert.position.y)*pos2[  conn[instanceIndex*16+ 7]  ]
+                    +B2(vert.position.x)*B0prime(vert.position.y)*pos2[  conn[instanceIndex*16+ 8]  ]
+                    +B2(vert.position.x)*B1prime(vert.position.y)*pos2[  conn[instanceIndex*16+ 9]  ]
+                    +B2(vert.position.x)*B2prime(vert.position.y)*pos2[  conn[instanceIndex*16+10]  ]
+                    +B2(vert.position.x)*B3prime(vert.position.y)*pos2[  conn[instanceIndex*16+11]  ]
+                    +B3(vert.position.x)*B0prime(vert.position.y)*pos2[  conn[instanceIndex*16+12]  ]
+                    +B3(vert.position.x)*B1prime(vert.position.y)*pos2[  conn[instanceIndex*16+13]  ]
+                    +B3(vert.position.x)*B2prime(vert.position.y)*pos2[  conn[instanceIndex*16+14]  ]
+                    +B3(vert.position.x)*B3prime(vert.position.y)*pos2[  conn[instanceIndex*16+15]  ];
 
             let normal = normalize(  cross(  (tu).xyz, (tv).xyz  )  );
             vsOut.normal = normal;
 
-            // let imageWidth: f32 = 512;  // 예시 이미지 너비
-            // let imageHeight: f32 = 512;  // 예시 이미지 높이
-
-            // 텍스처 좌표에 따라 이미지에서 변위 값을 샘플링
-            // let texCoord = vert.position; // Vertex 구조체에 texCoords가 있다고 가정
-            // let xIndex = i32(texCoord.x * imageWidth);
-            // let yIndex = i32(texCoord.y * imageHeight);
-            // let index = xIndex + yIndex * i32(imageWidth);
-            // let displacement = texture[index];  // 이미지 데이터에서 변위 값 조회
-
             _ = sampler0;
             _ = base_UV[ instanceIndex ];
+            _ = textureBuffer[ instanceIndex ];
+            _ = object_texture;
 
-            let patchImageHighX = vec2f(   vert.position.y *base_UV[  instanceIndex*4+1  ])
-                                + vec2f((1-vert.position.y)*base_UV[  instanceIndex*4+0  ]);
-            let patchImageLowX  = vec2f(   vert.position.y *base_UV[  instanceIndex*4+3  ])
-                                + vec2f((1-vert.position.y)*base_UV[  instanceIndex*4+2  ]);
+            // let patchImageHighX = vec2f(   vert.position.y *base_UV[  instanceIndex*4+1  ])
+            //                     + vec2f((1-vert.position.y)*base_UV[  instanceIndex*4+0  ]);
+            // let patchImageLowX  = vec2f(   vert.position.y *base_UV[  instanceIndex*4+3 ])
+            //                     + vec2f((1-vert.position.y)*base_UV[  instanceIndex*4+2  ]);
+
+            // let uv              = vec2f(   vert.position.x *patchImageLowX)
+            //                     + vec2f((1-vert.position.x)*patchImageHighX);
+
+            let texture5_0  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 0].x*512, (1-base_UV[instanceIndex*16 + 0].y)*512)), 0);
+            let texture5_1  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 1].x*512, (1-base_UV[instanceIndex*16 + 1].y)*512)), 0);
+            let texture5_2  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 2].x*512, (1-base_UV[instanceIndex*16 + 2].y)*512)), 0);
+            let texture5_3  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 3].x*512, (1-base_UV[instanceIndex*16 + 3].y)*512)), 0);
+            let texture6_0  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 4].x*512, (1-base_UV[instanceIndex*16 + 4].y)*512)), 0);
+            let texture6_1  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 5].x*512, (1-base_UV[instanceIndex*16 + 5].y)*512)), 0);
+            let texture6_2  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 6].x*512, (1-base_UV[instanceIndex*16 + 6].y)*512)), 0);
+            let texture6_3  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 7].x*512, (1-base_UV[instanceIndex*16 + 7].y)*512)), 0);
+            let texture9_0  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 8].x*512, (1-base_UV[instanceIndex*16 + 8].y)*512)), 0);
+            let texture9_1  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 9].x*512, (1-base_UV[instanceIndex*16 + 9].y)*512)), 0);
+            let texture9_2  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 +10].x*512, (1-base_UV[instanceIndex*16 +10].y)*512)), 0);
+            let texture9_3  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 +11].x*512, (1-base_UV[instanceIndex*16 +11].y)*512)), 0);
+            let texture10_0 = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 +12].x*512, (1-base_UV[instanceIndex*16 +12].y)*512)), 0);
+            let texture10_1 = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 +13].x*512, (1-base_UV[instanceIndex*16 +13].y)*512)), 0);
+            let texture10_2 = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 +14].x*512, (1-base_UV[instanceIndex*16 +14].y)*512)), 0);
+            let texture10_3 = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 +15].x*512, (1-base_UV[instanceIndex*16 +15].y)*512)), 0);
+    
+            let textureBuffer5  = max(max(texture5_0.x  , texture5_1.x)  , max(texture5_2.x  , texture5_3.x) );
+            let textureBuffer6  = max(max(texture6_0.x  , texture6_1.x)  , max(texture6_2.x  , texture6_3.x) );
+            let textureBuffer9  = max(max(texture9_0.x  , texture9_1.x)  , max(texture9_2.x  , texture9_3.x) );
+            let textureBuffer10 = max(max(texture10_0.x , texture10_1.x) , max(texture10_2.x , texture10_3.x));
+
+
+            let patchImageHighX = vec2f(   vert.position.y *base_UV[  instanceIndex*16+4  ])
+                                + vec2f((1-vert.position.y)*base_UV[  instanceIndex*16+0  ]);
+            let patchImageLowX  = vec2f(   vert.position.y *base_UV[  instanceIndex*16+12 ])
+                                + vec2f((1-vert.position.y)*base_UV[  instanceIndex*16+8  ]);
 
             let uv              = vec2f(   vert.position.x *patchImageLowX)
                                 + vec2f((1-vert.position.x)*patchImageHighX);
+            
             let texCoordInt = vec2i(  i32(uv.x*512.0),  i32((1-uv.y)*512.0)  );
-            // let textureValue = f32(round(80*(pow(20, textureLoad(u_earthbump1k, texCoordInt, 0).x - 0.5)/4.5)))/80.0; // textureLoad 뽑아내면 될듯
-            // let textureValue = f32(round(80*(pow(  20, textureLoad(u_earthbump1k, texCoordInt, 0).x )) /20 ))/80.0;
-            // let textureValue = f32(round(80*(pow(  textureLoad(u_earthbump1k, texCoordInt, 0).x, 10) )))/80.0;
-            let textureValue = f32(round(512*textureLoad(u_earthbump1k, texCoordInt, 0).x))/512.0;
-            // let textureValue = textureLoad(u_earthbump1k, texCoordInt, 0).x;
+
+            // let patchImageHighX1 =    vert.position.y *textureBuffer[  conn[ instanceIndex*16+5]  ]
+            //                      + (1-vert.position.y)*textureBuffer[  conn[ instanceIndex*16+6]  ];
+            // let patchImageLowX1  =    vert.position.y *textureBuffer[  conn[ instanceIndex*16+9]  ]
+            //                      + (1-vert.position.y)*textureBuffer[  conn[ instanceIndex*16+10]  ];
+
+            // let textureValue    =    vert.position.x *patchImageLowX1
+            //                     + (1-vert.position.x)*patchImageHighX1;
+
+            let patchImageHighX1 =    vert.position.y *textureBuffer6
+                                 + (1-vert.position.y)*textureBuffer5;
+            let patchImageLowX1  =    vert.position.y *textureBuffer10
+                                 + (1-vert.position.y)*textureBuffer9;
+
+            var textureValue    =    vert.position.x *patchImageLowX1
+                                + (1-vert.position.x)*patchImageHighX1;
+
+            if(vert.position.x == 0 && vert.position.y == 0)
+            {
+                textureValue = Max_of_4value(
+                    textureLoad(object_texture, vec2i(vec2f(
+                        base_UV[instanceIndex*16 + 0].x*512, (1-base_UV[instanceIndex*16 + 0].y)*512
+                    )), 0).x,
+                    textureLoad(object_texture, vec2i(vec2f(
+                        base_UV[instanceIndex*16 + 1].x*512, (1-base_UV[instanceIndex*16 + 1].y)*512
+                    )), 0).x,
+                    textureLoad(object_texture, vec2i(vec2f(
+                        base_UV[instanceIndex*16 + 2].x*512, (1-base_UV[instanceIndex*16 + 2].y)*512
+                    )), 0).x,
+                    textureLoad(object_texture, vec2i(vec2f(
+                        base_UV[instanceIndex*16 + 3].x*512, (1-base_UV[instanceIndex*16 + 3].y)*512
+                    )), 0).x,
+                );
+            }
+
+            else if(vert.position.x == 0 && vert.position.y == 1)
+            {
+                textureValue = Max_of_4value(
+                    textureLoad(object_texture, vec2i(vec2f(
+                        base_UV[instanceIndex*16 + 4].x*512, (1-base_UV[instanceIndex*16 + 4].y)*512
+                    )), 0).x,
+                    textureLoad(object_texture, vec2i(vec2f(
+                        base_UV[instanceIndex*16 + 5].x*512, (1-base_UV[instanceIndex*16 + 5].y)*512
+                    )), 0).x,
+                    textureLoad(object_texture, vec2i(vec2f(
+                        base_UV[instanceIndex*16 + 6].x*512, (1-base_UV[instanceIndex*16 + 6].y)*512
+                    )), 0).x,
+                    textureLoad(object_texture, vec2i(vec2f(
+                        base_UV[instanceIndex*16 + 7].x*512, (1-base_UV[instanceIndex*16 + 7].y)*512
+                    )), 0).x,
+                );
+            }
+
+            else if(vert.position.x == 1 && vert.position.y == 0)
+            {
+                textureValue = Max_of_4value(
+                    textureLoad(object_texture, vec2i(vec2f(
+                        base_UV[instanceIndex*16 + 8].x*512, (1-base_UV[instanceIndex*16 + 8].y)*512
+                    )), 0).x,
+                    textureLoad(object_texture, vec2i(vec2f(
+                        base_UV[instanceIndex*16 + 9].x*512, (1-base_UV[instanceIndex*16 + 9].y)*512
+                    )), 0).x,
+                    textureLoad(object_texture, vec2i(vec2f(
+                        base_UV[instanceIndex*16 +10].x*512, (1-base_UV[instanceIndex*16 +10].y)*512
+                    )), 0).x,
+                    textureLoad(object_texture, vec2i(vec2f(
+                        base_UV[instanceIndex*16 +11].x*512, (1-base_UV[instanceIndex*16 +11].y)*512
+                    )), 0).x,
+                );
+            }
+
+            else if(vert.position.x == 1 && vert.position.y == 1)
+            {
+                textureValue = Max_of_4value(
+                    textureLoad(object_texture, vec2i(vec2f(
+                        base_UV[instanceIndex*16 +12].x*512, (1-base_UV[instanceIndex*16 +12].y)*512
+                    )), 0).x,
+                    textureLoad(object_texture, vec2i(vec2f(
+                        base_UV[instanceIndex*16 +13].x*512, (1-base_UV[instanceIndex*16 +13].y)*512
+                    )), 0).x,
+                    textureLoad(object_texture, vec2i(vec2f(
+                        base_UV[instanceIndex*16 +14].x*512, (1-base_UV[instanceIndex*16 +14].y)*512
+                    )), 0).x,
+                    textureLoad(object_texture, vec2i(vec2f(
+                        base_UV[instanceIndex*16 +15].x*512, (1-base_UV[instanceIndex*16 +15].y)*512
+                    )), 0).x,
+                );
+            }
+    
+            else if(vert.position.y == 0)
+            {
+                textureValue = Max_of_2value(
+                    textureLoad(object_texture, vec2i(vec2f(
+                        (   (1-vert.position.x) * base_UV[instanceIndex*16 +  0] + vert.position.x * base_UV[instanceIndex*16 +  8] ).x*512,
+                        (1-((1-vert.position.x) * base_UV[instanceIndex*16 +  0] + vert.position.x * base_UV[instanceIndex*16 +  8])).y*512
+                    )), 0).x,
+                    textureLoad(object_texture, vec2i(vec2f(
+                        (   (1-vert.position.x) * base_UV[instanceIndex*16 +  1] + vert.position.x * base_UV[instanceIndex*16 + 11] ).x*512,
+                        (1-((1-vert.position.x) * base_UV[instanceIndex*16 +  1] + vert.position.x * base_UV[instanceIndex*16 + 11])).y*512
+                    )), 0).x
+                );
+            }
+            else if(vert.position.y == 1)
+            {
+                textureValue = Max_of_2value(
+                    textureLoad(object_texture, vec2i(vec2f(
+                        (   (1-vert.position.x) * base_UV[instanceIndex*16 +  4] + vert.position.x * base_UV[instanceIndex*16 + 12] ).x*512,
+                        (1-((1-vert.position.x) * base_UV[instanceIndex*16 +  4] + vert.position.x * base_UV[instanceIndex*16 + 12])).y*512
+                    )), 0).x,
+                    textureLoad(object_texture, vec2i(vec2f(
+                        (   (1-vert.position.x) * base_UV[instanceIndex*16 +  7] + vert.position.x * base_UV[instanceIndex*16 + 13] ).x*512,
+                        (1-((1-vert.position.x) * base_UV[instanceIndex*16 +  7] + vert.position.x * base_UV[instanceIndex*16 + 13])).y*512
+                    )), 0).x
+                );
+            }
+            else if(vert.position.x == 0)
+            {
+                textureValue = Max_of_2value(
+                    textureLoad(object_texture, vec2i(vec2f(
+                        (   (1-vert.position.y) * base_UV[instanceIndex*16 +  0] + vert.position.y * base_UV[instanceIndex*16 +  4] ).x*512,
+                        (1-((1-vert.position.y) * base_UV[instanceIndex*16 +  0] + vert.position.y * base_UV[instanceIndex*16 +  4])).y*512
+                    )), 0).x,
+                    textureLoad(object_texture, vec2i(vec2f(
+                        (   (1-vert.position.y) * base_UV[instanceIndex*16 +  3] + vert.position.y * base_UV[instanceIndex*16 +  5] ).x*512,
+                        (1-((1-vert.position.y) * base_UV[instanceIndex*16 +  3] + vert.position.y * base_UV[instanceIndex*16 +  5])).y*512
+                    )), 0).x
+                );
+            }
+            else if(vert.position.x == 1)
+            {
+                textureValue = Max_of_2value(
+                    textureLoad(object_texture, vec2i(vec2f(
+                        (   (1-vert.position.y) * base_UV[instanceIndex*16 +  8] + vert.position.y * base_UV[instanceIndex*16 + 12] ).x*512,
+                        (1-((1-vert.position.y) * base_UV[instanceIndex*16 +  8] + vert.position.y * base_UV[instanceIndex*16 + 12])).y*512
+                    )), 0).x,
+                    textureLoad(object_texture, vec2i(vec2f(
+                        (   (1-vert.position.y) * base_UV[instanceIndex*16 +  9] + vert.position.y * base_UV[instanceIndex*16 + 15] ).x*512,
+                        (1-((1-vert.position.y) * base_UV[instanceIndex*16 +  9] + vert.position.y * base_UV[instanceIndex*16 + 15])).y*512
+                    )), 0).x
+                );
+            }
+
+            else
+            {
+                textureValue = textureLoad(object_texture, texCoordInt, 0).x;
+            }
+
+            // let textureValue = f32(round(80*(pow(20, textureLoad(object_texture, texCoordInt, 0).x - 0.5)/4.5)))/80.0; // textureLoad 뽑아내면 될듯
+            // let textureValue = f32(round(80*(pow(  20, textureLoad(object_texture, texCoordInt, 0).x )) /20 ))/80.0;
+            // let textureValue = f32(round(80*(pow(  textureLoad(object_texture, texCoordInt, 0).x, 10) )))/80.0;
+            // let textureValue = f32(round(5*textureLoad(object_texture, texCoordInt, 0).x))/5.0;
+            // let textureValue = textureLoad(object_texture, texCoordInt, 0).x;
+            // let textureValue = (vert.position.x *textureImageLowX) + ((1-vert.position.x)*textureImageHighX);
+            // let textureValue = (textureValue0 + textureValue1 + textureValue2 + textureValue3) / 4;
 
             // vsOut.position = uni.matrix * vec4f(p*5, 1);
             if(textureValue-0.5 < 0)
@@ -352,21 +591,21 @@ export async function createPipelines(device, presentationFormat) {
             }
             else
             {
-                vsOut.position = uni.matrix * vec4f(p*5 + normal*(textureValue-0.5)*20, 1);
+                vsOut.position = uni.matrix * vec4f(p*5 + normal*(textureValue-0.5)*30, 1);
             }
-            // vsOut.position = uni.matrix * vec4f(p*5 + textureValue*2, 1);
+            // vsOut.position = uni.matrix * vec4f(p*5 + textureValue*5, 1);
             // vsOut.position = uni.matrix * vec4f(p*5 + normal*2, 1);
 
-            // vsOut.position = uni.matrix * vec4f(p*5 + normal*textureValue*10, 1);
+            // vsOut.position = uni.matrix * vec4f(p*5 + normal*textureValue*5, 1);
 
             vsOut.center = vec3f(vert.position.xy, 0);
             vsOut.texcoord = vec2f(uv.x, 1-uv.y);
-            // vsOut.texcoord = vec2f(textureValue, 0);
+            vsOut.texcoord1 = vec2f(textureValue, 0);
 
-            let g0 = pos2[  conn[instanceIndex*16+ 5].index  ].position.xyz;
-            let g1 = pos2[  conn[instanceIndex*16+ 6].index  ].position.xyz;
-            let g2 = pos2[  conn[instanceIndex*16+ 9].index  ].position.xyz;
-            let g3 = pos2[  conn[instanceIndex*16+10].index  ].position.xyz;
+            let g0 = pos2[  conn[instanceIndex*16+ 5]  ].xyz;
+            let g1 = pos2[  conn[instanceIndex*16+ 6]  ].xyz;
+            let g2 = pos2[  conn[instanceIndex*16+ 9]  ].xyz;
+            let g3 = pos2[  conn[instanceIndex*16+10]  ].xyz;
             let view = normalize(  -1*uni.view - p  );
             vsOut.color = color.value;
             vsOut.color += color.value * vec4f(dot(view, normal)*0.5, dot(view, normal)*0.5, dot(view, normal)*0.5, 1)  ;
@@ -386,7 +625,7 @@ export async function createPipelines(device, presentationFormat) {
         }
 
         @fragment fn fs(vsOut: VSOutput) -> @location(0) vec4f {
-            let temp = textureSample(u_earthbump1k, sampler0, vsOut.texcoord); // textureLoad 뽑아내면 될듯
+            let temp = textureSample(object_texture, sampler0, vsOut.texcoord); // textureLoad 뽑아내면 될듯
             // if(vsOut.normal.z < 0.0)
             // {
             //     discard;
@@ -396,8 +635,8 @@ export async function createPipelines(device, presentationFormat) {
             //     return vec4f(0, 0, 0, 1);
             // }
             // return vsOut.color;
-            return temp;
-            // return vec4f(vsOut.texcoord, 0, 1);
+            // return vec4f(temp.xyz*5 - 2.5, 1);
+            return vec4f(vsOut.texcoord1.x*5 -2.5, vsOut.texcoord1.x*5 -2.5, vsOut.texcoord1.x*5 -2.5, 1);
         }
         `,
     });
@@ -430,7 +669,7 @@ export async function createPipelines(device, presentationFormat) {
         @group(0) @binding(0) var<uniform> uni: Uniforms;
         @group(0) @binding(1) var<storage, read> extra_index_storage_buffer: array<u32>;
         @group(0) @binding(2) var<storage, read> extra_base_UV: array<vec2f>;
-        @group(0) @binding(3) var u_earthbump1k: texture_2d<f32>;
+        @group(0) @binding(3) var object_texture: texture_2d<f32>;
         @group(0) @binding(4) var sampler0: sampler;
         @group(0) @binding(5) var<storage, read> base_vertex: array<vec4f>;
         @group(0) @binding(6) var<storage, read> base_normal: array<vec4f>;
@@ -444,7 +683,7 @@ export async function createPipelines(device, presentationFormat) {
 
             _ = base_normal[0].x;
             _ = extra_base_UV[0].x;
-            _ = u_earthbump1k;
+            _ = object_texture;
             _ = sampler0;
             _ = extra_index_storage_buffer[0];
             _ = base_vertex[0].x;
@@ -453,7 +692,7 @@ export async function createPipelines(device, presentationFormat) {
             let uv = extra_base_UV[instanceIndex*6+vertexIndex];
             vsOut.texcoord = vec2f(uv.x, 1-uv.y);
             let texCoordInt = vec2i(  i32(uv.x*512.0),  i32((1-uv.y)*512.0)  );
-            let textureValue = textureLoad(u_earthbump1k, texCoordInt, 0); // textureLoad 뽑아내면 될듯
+            let textureValue = textureLoad(object_texture, texCoordInt, 0); // textureLoad 뽑아내면 될듯
 
             // let p = vert.position.xyz;
             let p = vec3f(base_vertex[extra_index_storage_buffer[instanceIndex*6+vertexIndex]].xyz);
@@ -468,14 +707,14 @@ export async function createPipelines(device, presentationFormat) {
                 vsOut.position = uni.matrix * vec4f(p*5 - (base_normal[extra_index_storage_buffer[instanceIndex*6+vertexIndex]].xyz)*(textureValue.x-0.5)*20, 1);
             }
             // vsOut.position = uni.matrix * vec4f(p*5 - (base_normal[extra_index_storage_buffer[instanceIndex*6+vertexIndex]].xyz)*2, 1);
-            vsOut.position = uni.matrix * vec4f(p*5 + textureValue.x*2, 1);
+            // vsOut.position = uni.matrix * vec4f(p*5 + textureValue.x*2, 1);
             // vsOut.color = vec4f(-base_normal[extra_index_storage_buffer[instanceIndex*6+vertexIndex]].xyz, 1.0);
             // vsOut.color = vec4f(base_normal[extra_index_storage_buffer[instanceIndex*6+vertexIndex]].x,0,0.0, 1.0);
             return vsOut;
         }
 
         @fragment fn fs(vsOut: VSOutput) -> @location(0) vec4f {
-            let temp = textureSample(u_earthbump1k, sampler0, vsOut.texcoord); // textureLoad 뽑아내면 될듯
+            let temp = textureSample(object_texture, sampler0, vsOut.texcoord); // textureLoad 뽑아내면 될듯
             return temp;
             // return vec4f(vsOut.texcoord, 0, 1);
             // return vec4f(0.5, 0, 0, 1);
@@ -714,5 +953,6 @@ export async function createPipelines(device, presentationFormat) {
         },
     });
 
-    return { pipeline_Face, pipeline_Edge, pipeline_Vertex, pipelines, pipeline2, pipelineAnime, xyzPipeline, pipeline_Limit };
+    return { pipeline_PatchTexture, pipeline_Face, pipeline_Edge, pipeline_Vertex, 
+            pipelines, pipeline2, pipelineAnime, xyzPipeline, pipeline_Limit };
 }
