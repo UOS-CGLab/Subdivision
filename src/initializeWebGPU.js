@@ -1,3 +1,5 @@
+import { handleKeyUp, handleKeyDown } from './camera.js';
+
 export async function initializeWebGPU() {
     const adapter = await navigator.gpu?.requestAdapter();
     if (!adapter) {
@@ -24,17 +26,28 @@ export async function initializeWebGPU() {
         alphaMode: 'premultiplied',
     });
 
+    document.addEventListener('keyup', handleKeyUp);
+    document.addEventListener('keydown', handleKeyDown);
+
     return { canvas, device, context, presentationFormat, canTimestamp };
 }
 
 export async function fetchData(myString) {
     const data = await fetch('./../'+myString+'/topology.json');
     const data2 = await fetch('./../'+myString+'/base.json');
+    const data3 = await fetch('../'+myString+'/limit_point.json');
     const obj = await data.json();
     const base = await data2.json();
+    const limit = await data3.json();
+
+    console.log(limit);
 
     const animationBase = await (await fetch('./../'+myString+'/animation/base.json')).json();
 
-    return { obj, base, animationBase };
+    const img = document.createElement('img');
+    img.src = './'+myString+'/d512.bmp';
+    await img.decode();
+
+    return { obj, base, animationBase, limit };
 }
 

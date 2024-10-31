@@ -1,63 +1,5 @@
 export async function createPipelines(device, presentationFormat) {
 
-    const module_PatchTexture = device.createShaderModule({
-        code: /*wgsl*/ `
-        @group(0) @binding(0) var<storage, read> conn: array<i32>;
-        @group(0) @binding(1) var<storage, read> base_UV: array<vec2f>;
-        @group(0) @binding(2) var<storage, read_write> textureBuffer: array<f32>;
-        @group(0) @binding(3) var object_texture: texture_2d<f32>;
-
-        @compute @workgroup_size(256)
-        fn cs(
-            @builtin(global_invocation_id) global_id : vec3<u32>
-            // @builtin(instance_index) instanceIndex: u32
-        ){
-            let instanceIndex = global_id.x;
-
-            let vertex5  = conn[instanceIndex*16+ 5];   //base_UV에 instance*16, 16개중 앞 4개
-            let vertex6  = conn[instanceIndex*16+ 6];
-            let vertex9  = conn[instanceIndex*16+ 9];
-            let vertex10 = conn[instanceIndex*16+10];
-
-            let texture5_0  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 0].x*512, (1-base_UV[instanceIndex*16 + 0].y)*512)), 0);
-            let texture5_1  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 1].x*512, (1-base_UV[instanceIndex*16 + 1].y)*512)), 0);
-            let texture5_2  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 2].x*512, (1-base_UV[instanceIndex*16 + 2].y)*512)), 0);
-            let texture5_3  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 3].x*512, (1-base_UV[instanceIndex*16 + 3].y)*512)), 0);
-            let texture6_0  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 4].x*512, (1-base_UV[instanceIndex*16 + 4].y)*512)), 0);
-            let texture6_1  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 5].x*512, (1-base_UV[instanceIndex*16 + 5].y)*512)), 0);
-            let texture6_2  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 6].x*512, (1-base_UV[instanceIndex*16 + 6].y)*512)), 0);
-            let texture6_3  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 7].x*512, (1-base_UV[instanceIndex*16 + 7].y)*512)), 0);
-            let texture9_0  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 8].x*512, (1-base_UV[instanceIndex*16 + 8].y)*512)), 0);
-            let texture9_1  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 9].x*512, (1-base_UV[instanceIndex*16 + 9].y)*512)), 0);
-            let texture9_2  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 +10].x*512, (1-base_UV[instanceIndex*16 +10].y)*512)), 0);
-            let texture9_3  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 +11].x*512, (1-base_UV[instanceIndex*16 +11].y)*512)), 0);
-            let texture10_0 = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 +12].x*512, (1-base_UV[instanceIndex*16 +12].y)*512)), 0);
-            let texture10_1 = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 +13].x*512, (1-base_UV[instanceIndex*16 +13].y)*512)), 0);
-            let texture10_2 = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 +14].x*512, (1-base_UV[instanceIndex*16 +14].y)*512)), 0);
-            let texture10_3 = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 +15].x*512, (1-base_UV[instanceIndex*16 +15].y)*512)), 0);
-    
-            let textureBuffer5  = (texture5_0.x  + texture5_1.x  + texture5_2.x  + texture5_3.x ) / 4.0;
-            let textureBuffer6  = (texture6_0.x  + texture6_1.x  + texture6_2.x  + texture6_3.x ) / 4.0;
-            let textureBuffer9  = (texture9_0.x  + texture9_1.x  + texture9_2.x  + texture9_3.x ) / 4.0;
-            let textureBuffer10 = (texture10_0.x + texture10_1.x + texture10_2.x + texture10_3.x) / 4.0;
-
-            textureBuffer[vertex5 ] = (texture5_0.x  + texture5_1.x  + texture5_2.x  + texture5_3.x ) / 4.0;
-            textureBuffer[vertex6 ] = (texture6_0.x  + texture6_1.x  + texture6_2.x  + texture6_3.x ) / 4.0;
-            textureBuffer[vertex9 ] = (texture9_0.x  + texture9_1.x  + texture9_2.x  + texture9_3.x ) / 4.0;
-            textureBuffer[vertex10] = (texture10_0.x + texture10_1.x + texture10_2.x + texture10_3.x) / 4.0;
-        }
-        `
-    })
-    
-    const pipeline_PatchTexture = device.createComputePipeline({
-        label: 'PatchTexture Compute Pipeline',
-        layout: 'auto',
-        compute: {
-            module: module_PatchTexture,
-            entryPoint: 'cs',
-        },
-    });
-
     const module_Face = device.createShaderModule({
         code: /*wgsl*/ `
         @group(0) @binding(0) var<storage, read> vertex_F: array<i32>;
@@ -162,42 +104,42 @@ export async function createPipelines(device, presentationFormat) {
     const module_Limit = device.createShaderModule({
         code: /*wgsl*/ `
         @group(0) @binding(0) var<storage, read_write> baseVertex: array<f32>;
-        @group(0) @binding(1) var<storage, read> limitData: array<i32>;
+        @group(0) @binding(1) var<storage, read_write> limitData: array<i32>;
         @group(0) @binding(2) var<storage, read_write> baseNormal: array<vec4f>;
 
 
         @compute @workgroup_size(256)
         fn compute_LimitPoint(@builtin(global_invocation_id) global_invocation_id: vec3<u32>){
-        let id = global_invocation_id.x;
-        let limitIdx= limitData[id*9];
+            let id = global_invocation_id.x;
+            let limitIdx= limitData[id*9];
 
-        var limPos = vec3(baseVertex[4*limitIdx], baseVertex[4*limitIdx+1], baseVertex[4*limitIdx+2]);
+            var limPos = vec3(baseVertex[4*limitIdx], baseVertex[4*limitIdx+1], baseVertex[4*limitIdx+2]);
 
-        let e0 = vec3(baseVertex[4*limitData[id*9+1]],baseVertex[4*limitData[id*9+1]+1],baseVertex[4*limitData[id*9+1]+2]);
-        let e1 = vec3(baseVertex[4*limitData[id*9+3]],baseVertex[4*limitData[id*9+3]+1],baseVertex[4*limitData[id*9+3]+2]);
-        let e2 = vec3(baseVertex[4*limitData[id*9+5]],baseVertex[4*limitData[id*9+5]+1],baseVertex[4*limitData[id*9+5]+2]);
-        let e3 = vec3(baseVertex[4*limitData[id*9+7]],baseVertex[4*limitData[id*9+7]+1],baseVertex[4*limitData[id*9+7]+2]);
+            let e0 = vec3(baseVertex[4*limitData[id*9+1]],baseVertex[4*limitData[id*9+1]+1],baseVertex[4*limitData[id*9+1]+2]);
+            let e1 = vec3(baseVertex[4*limitData[id*9+3]],baseVertex[4*limitData[id*9+3]+1],baseVertex[4*limitData[id*9+3]+2]);
+            let e2 = vec3(baseVertex[4*limitData[id*9+5]],baseVertex[4*limitData[id*9+5]+1],baseVertex[4*limitData[id*9+5]+2]);
+            let e3 = vec3(baseVertex[4*limitData[id*9+7]],baseVertex[4*limitData[id*9+7]+1],baseVertex[4*limitData[id*9+7]+2]);
 
 
-        let f0 = vec3(baseVertex[4*limitData[id*9+2]],baseVertex[4*limitData[id*9+2]+1],baseVertex[4*limitData[id*9+2]+2]);
-        let f1 = vec3(baseVertex[4*limitData[id*9+4]],baseVertex[4*limitData[id*9+4]+1],baseVertex[4*limitData[id*9+4]+2]);
-        let f2 = vec3(baseVertex[4*limitData[id*9+6]],baseVertex[4*limitData[id*9+6]+1],baseVertex[4*limitData[id*9+6]+2]);
-        let f3 = vec3(baseVertex[4*limitData[id*9+8]],baseVertex[4*limitData[id*9+8]+1],baseVertex[4*limitData[id*9+8]+2]);
+            let f0 = vec3(baseVertex[4*limitData[id*9+2]],baseVertex[4*limitData[id*9+2]+1],baseVertex[4*limitData[id*9+2]+2]);
+            let f1 = vec3(baseVertex[4*limitData[id*9+4]],baseVertex[4*limitData[id*9+4]+1],baseVertex[4*limitData[id*9+4]+2]);
+            let f2 = vec3(baseVertex[4*limitData[id*9+6]],baseVertex[4*limitData[id*9+6]+1],baseVertex[4*limitData[id*9+6]+2]);
+            let f3 = vec3(baseVertex[4*limitData[id*9+8]],baseVertex[4*limitData[id*9+8]+1],baseVertex[4*limitData[id*9+8]+2]);
 
-        let edge_sum = e0+e1+e2+e3;
-        let face_sum = f0+f1+f2+f3;
+            let edge_sum = e0+e1+e2+e3;
+            let face_sum = f0+f1+f2+f3;
 
-        let c2 = 4*(e0-e2)+f0-f1-f2+f3;
-        let c3 = 4*(e1-e3)+f1-f2-f3+f0;
-        let normal = normalize(cross(c2,c3));
+            let c2 = 4*(e0-e2)+f0-f1-f2+f3;
+            let c3 = 4*(e1-e3)+f1-f2-f3+f0;
+            let normal = normalize(cross(c2,c3));
 
-        baseVertex[limitIdx*4] = ((16*limPos.x) + 4*edge_sum.x + (face_sum.x))/36;
-        baseVertex[limitIdx*4+1] = ((16*limPos.y) + 4*edge_sum.y + (face_sum.y))/36;
-        baseVertex[limitIdx*4+2] = ((16*limPos.z) + 4*edge_sum.z + (face_sum.z))/36;
-        baseVertex[limitIdx*4+3] = 0;
+            baseVertex[limitIdx*4] = ((16*limPos.x) + 4*edge_sum.x + (face_sum.x))/36;
+            baseVertex[limitIdx*4+1] = ((16*limPos.y) + 4*edge_sum.y + (face_sum.y))/36;
+            baseVertex[limitIdx*4+2] = ((16*limPos.z) + 4*edge_sum.z + (face_sum.z))/36;
+            baseVertex[limitIdx*4+3] = 0;
 
-        baseNormal[limitIdx] = vec4f(normal.xyz,1);
-
+            baseNormal[limitIdx] = vec4f(normal, 0);
+            baseNormal[0] = vec4f(0, 0, 0, 0);
         }
         `
     });
@@ -277,9 +219,10 @@ export async function createPipelines(device, presentationFormat) {
 
         @group(0) @binding(0) var<uniform> uni: Uniforms;
         @group(0) @binding(1) var<storage, read> pos2: array<vec4f>;
-        @group(0) @binding(2) var object_texture: texture_2d<f32>;
-        @group(0) @binding(3) var sampler0: sampler;
-        @group(0) @binding(4) var<storage> textureBuffer: array<f32>;
+        @group(0) @binding(2) var<storage, read> base_normal: array<vec4f>;
+        @group(0) @binding(3) var object_texture: texture_2d<f32>;
+        @group(0) @binding(4) var sampler0: sampler;
+        @group(0) @binding(5) var<storage> textureBuffer: array<f32>;
         @group(1) @binding(0) var<storage, read> conn: array<i32>;
         @group(1) @binding(1) var<storage, read> base_UV: array<vec2f>;
         @group(1) @binding(2) var<storage, read> color: Color;
@@ -313,12 +256,12 @@ export async function createPipelines(device, presentationFormat) {
             return sqrt(pow(t.x, 2)+pow(t.y, 2)+pow(t.z, 2));
         }
 
-        fn Max_of_4value(a: f32, b:f32, c:f32, d:f32) -> f32 {
+        fn Sum_of_4value(a: f32, b:f32, c:f32, d:f32) -> f32 {
             // return max(max(a, b), max(c, d));
             return (a + b + c + d) / 4;
         }
 
-        fn Max_of_2value(a: f32, b:f32) -> f32 {
+        fn Sum_of_2value(a: f32, b:f32) -> f32 {
             // return max(a, b);
             return (a + b) / 2;
         }
@@ -381,13 +324,13 @@ export async function createPipelines(device, presentationFormat) {
                     +B3(vert.position.x)*B2prime(vert.position.y)*pos2[  conn[instanceIndex*16+14]  ]
                     +B3(vert.position.x)*B3prime(vert.position.y)*pos2[  conn[instanceIndex*16+15]  ];
 
-            let normal = normalize(  cross(  (tu).xyz, (tv).xyz  )  );
-            vsOut.normal = normal;
+            var normal = normalize(  cross(  (tu).xyz, (tv).xyz  )  );
 
             _ = sampler0;
             _ = base_UV[ instanceIndex ];
             _ = textureBuffer[ instanceIndex ];
             _ = object_texture;
+            _ = base_normal[0];
 
             // let patchImageHighX = vec2f(   vert.position.y *base_UV[  instanceIndex*4+1  ])
             //                     + vec2f((1-vert.position.y)*base_UV[  instanceIndex*4+0  ]);
@@ -448,7 +391,7 @@ export async function createPipelines(device, presentationFormat) {
 
             if(vert.position.x == 0 && vert.position.y == 0)
             {
-                textureValue = Max_of_4value(
+                textureValue = Sum_of_4value(
                     textureLoad(object_texture, vec2i(vec2f(
                         base_UV[instanceIndex*16 + 0].x*512, (1-base_UV[instanceIndex*16 + 0].y)*512
                     )), 0).x,
@@ -462,11 +405,16 @@ export async function createPipelines(device, presentationFormat) {
                         base_UV[instanceIndex*16 + 3].x*512, (1-base_UV[instanceIndex*16 + 3].y)*512
                     )), 0).x,
                 );
+
+                if(base_normal[  conn[instanceIndex*16+5]  ].x != 0)
+                {
+                    normal = -base_normal[  conn[instanceIndex*16+5]  ].xyz;
+                }
             }
 
             else if(vert.position.x == 0 && vert.position.y == 1)
             {
-                textureValue = Max_of_4value(
+                textureValue = Sum_of_4value(
                     textureLoad(object_texture, vec2i(vec2f(
                         base_UV[instanceIndex*16 + 4].x*512, (1-base_UV[instanceIndex*16 + 4].y)*512
                     )), 0).x,
@@ -480,11 +428,16 @@ export async function createPipelines(device, presentationFormat) {
                         base_UV[instanceIndex*16 + 7].x*512, (1-base_UV[instanceIndex*16 + 7].y)*512
                     )), 0).x,
                 );
+
+                if(base_normal[  conn[instanceIndex*16+6]  ].x != 0)
+                {
+                    normal = -base_normal[  conn[instanceIndex*16+6]  ].xyz;
+                }
             }
 
             else if(vert.position.x == 1 && vert.position.y == 0)
             {
-                textureValue = Max_of_4value(
+                textureValue = Sum_of_4value(
                     textureLoad(object_texture, vec2i(vec2f(
                         base_UV[instanceIndex*16 + 8].x*512, (1-base_UV[instanceIndex*16 + 8].y)*512
                     )), 0).x,
@@ -498,11 +451,16 @@ export async function createPipelines(device, presentationFormat) {
                         base_UV[instanceIndex*16 +11].x*512, (1-base_UV[instanceIndex*16 +11].y)*512
                     )), 0).x,
                 );
+
+                if(base_normal[  conn[instanceIndex*16+9]  ].x != 0)
+                {
+                    normal = -base_normal[  conn[instanceIndex*16+9]  ].xyz;
+                }
             }
 
             else if(vert.position.x == 1 && vert.position.y == 1)
             {
-                textureValue = Max_of_4value(
+                textureValue = Sum_of_4value(
                     textureLoad(object_texture, vec2i(vec2f(
                         base_UV[instanceIndex*16 +12].x*512, (1-base_UV[instanceIndex*16 +12].y)*512
                     )), 0).x,
@@ -516,11 +474,16 @@ export async function createPipelines(device, presentationFormat) {
                         base_UV[instanceIndex*16 +15].x*512, (1-base_UV[instanceIndex*16 +15].y)*512
                     )), 0).x,
                 );
+
+                if(base_normal[  conn[instanceIndex*16+10]  ].x != 0)
+                {
+                    normal = -base_normal[  conn[instanceIndex*16+10]  ].xyz;
+                }
             }
     
             else if(vert.position.y == 0)
             {
-                textureValue = Max_of_2value(
+                textureValue = Sum_of_2value(
                     textureLoad(object_texture, vec2i(vec2f(
                         (   (1-vert.position.x) * base_UV[instanceIndex*16 +  0] + vert.position.x * base_UV[instanceIndex*16 +  8] ).x*512,
                         (1-((1-vert.position.x) * base_UV[instanceIndex*16 +  0] + vert.position.x * base_UV[instanceIndex*16 +  8])).y*512
@@ -533,7 +496,7 @@ export async function createPipelines(device, presentationFormat) {
             }
             else if(vert.position.y == 1)
             {
-                textureValue = Max_of_2value(
+                textureValue = Sum_of_2value(
                     textureLoad(object_texture, vec2i(vec2f(
                         (   (1-vert.position.x) * base_UV[instanceIndex*16 +  4] + vert.position.x * base_UV[instanceIndex*16 + 12] ).x*512,
                         (1-((1-vert.position.x) * base_UV[instanceIndex*16 +  4] + vert.position.x * base_UV[instanceIndex*16 + 12])).y*512
@@ -546,7 +509,7 @@ export async function createPipelines(device, presentationFormat) {
             }
             else if(vert.position.x == 0)
             {
-                textureValue = Max_of_2value(
+                textureValue = Sum_of_2value(
                     textureLoad(object_texture, vec2i(vec2f(
                         (   (1-vert.position.y) * base_UV[instanceIndex*16 +  0] + vert.position.y * base_UV[instanceIndex*16 +  4] ).x*512,
                         (1-((1-vert.position.y) * base_UV[instanceIndex*16 +  0] + vert.position.y * base_UV[instanceIndex*16 +  4])).y*512
@@ -559,7 +522,7 @@ export async function createPipelines(device, presentationFormat) {
             }
             else if(vert.position.x == 1)
             {
-                textureValue = Max_of_2value(
+                textureValue = Sum_of_2value(
                     textureLoad(object_texture, vec2i(vec2f(
                         (   (1-vert.position.y) * base_UV[instanceIndex*16 +  8] + vert.position.y * base_UV[instanceIndex*16 + 12] ).x*512,
                         (1-((1-vert.position.y) * base_UV[instanceIndex*16 +  8] + vert.position.y * base_UV[instanceIndex*16 + 12])).y*512
@@ -593,7 +556,7 @@ export async function createPipelines(device, presentationFormat) {
             {
                 vsOut.position = uni.matrix * vec4f(p*5 + normal*(textureValue-0.5)*30, 1);
             }
-            // vsOut.position = uni.matrix * vec4f(p*5 + textureValue*5, 1);
+            // vsOut.position = uni.matrix * vec4f(p*5 + textureValue*20, 1);
             // vsOut.position = uni.matrix * vec4f(p*5 + normal*2, 1);
 
             // vsOut.position = uni.matrix * vec4f(p*5 + normal*textureValue*5, 1);
@@ -601,6 +564,7 @@ export async function createPipelines(device, presentationFormat) {
             vsOut.center = vec3f(vert.position.xy, 0);
             vsOut.texcoord = vec2f(uv.x, 1-uv.y);
             vsOut.texcoord1 = vec2f(textureValue, 0);
+            vsOut.normal = normal;
 
             let g0 = pos2[  conn[instanceIndex*16+ 5]  ].xyz;
             let g1 = pos2[  conn[instanceIndex*16+ 6]  ].xyz;
@@ -634,7 +598,7 @@ export async function createPipelines(device, presentationFormat) {
             // {
             //     return vec4f(0, 0, 0, 1);
             // }
-            // return vsOut.color;
+            // return vec4f(vsOut.normal, 1);
             // return vec4f(temp.xyz*5 - 2.5, 1);
             return vec4f(vsOut.texcoord1.x*5 -2.5, vsOut.texcoord1.x*5 -2.5, vsOut.texcoord1.x*5 -2.5, 1);
         }
@@ -664,15 +628,17 @@ export async function createPipelines(device, presentationFormat) {
             @builtin(position) position: vec4f,
             @location(0) color: vec4f,
             @location(1) texcoord: vec2f,
+            @location(2) texcoord1: vec2f,
         };
 
         @group(0) @binding(0) var<uniform> uni: Uniforms;
         @group(0) @binding(1) var<storage, read> extra_index_storage_buffer: array<u32>;
         @group(0) @binding(2) var<storage, read> extra_base_UV: array<vec2f>;
-        @group(0) @binding(3) var object_texture: texture_2d<f32>;
-        @group(0) @binding(4) var sampler0: sampler;
-        @group(0) @binding(5) var<storage, read> base_vertex: array<vec4f>;
-        @group(0) @binding(6) var<storage, read> base_normal: array<vec4f>;
+        @group(0) @binding(3) var<storage, read> extra_vertex_offset: array<i32>;
+        @group(0) @binding(4) var object_texture: texture_2d<f32>;
+        @group(0) @binding(5) var sampler0: sampler;
+        @group(0) @binding(6) var<storage, read> base_vertex: array<vec4f>;
+        @group(0) @binding(7) var<storage, read> base_normal: array<vec4f>;
 
         @vertex fn vs(
             @builtin(instance_index) instanceIndex: u32,
@@ -688,37 +654,51 @@ export async function createPipelines(device, presentationFormat) {
             _ = extra_index_storage_buffer[0];
             _ = base_vertex[0].x;
             _ = uni.matrix[0];
+            _ = extra_vertex_offset[0];
 
-            let uv = extra_base_UV[instanceIndex*6+vertexIndex];
+            let index = extra_vertex_offset[vertexIndex];
+            let vertex_count = extra_vertex_offset[vertexIndex+1] - extra_vertex_offset[vertexIndex];
+
+            var sum: f32 = 0.0;
+            for(var i=0; i<vertex_count; i++)
+            {
+                sum = sum + textureLoad(object_texture, vec2i(vec2f(extra_base_UV[index+i].x*512, (1-extra_base_UV[index+i].y)*512)), 0).x;
+            }
+            let textureValue = sum / f32(vertex_count);
+            
+            let uv = extra_base_UV[vertexIndex];
             vsOut.texcoord = vec2f(uv.x, 1-uv.y);
+            vsOut.texcoord1 = vec2f(textureValue, 0);
             let texCoordInt = vec2i(  i32(uv.x*512.0),  i32((1-uv.y)*512.0)  );
-            let textureValue = textureLoad(object_texture, texCoordInt, 0); // textureLoad 뽑아내면 될듯
 
             // let p = vert.position.xyz;
-            let p = vec3f(base_vertex[extra_index_storage_buffer[instanceIndex*6+vertexIndex]].xyz);
-
+            let p = vec3f(base_vertex[extra_index_storage_buffer[vertexIndex]].xyz);
+            var normal = base_normal[extra_index_storage_buffer[vertexIndex]].xyz;
+            
             // vsOut.position = uni.matrix * vec4f(p*5, 1);
-            if(textureValue.x-0.5 < 0)
+            if(textureValue-0.5 < 0)
             {
                 vsOut.position = uni.matrix * vec4f(p*5, 1);
             }
             else
             {
-                vsOut.position = uni.matrix * vec4f(p*5 - (base_normal[extra_index_storage_buffer[instanceIndex*6+vertexIndex]].xyz)*(textureValue.x-0.5)*20, 1);
+                vsOut.position = uni.matrix * vec4f(p*5 - normal*(textureValue-0.5)*30, 1);
             }
-            // vsOut.position = uni.matrix * vec4f(p*5 - (base_normal[extra_index_storage_buffer[instanceIndex*6+vertexIndex]].xyz)*2, 1);
-            // vsOut.position = uni.matrix * vec4f(p*5 + textureValue.x*2, 1);
-            // vsOut.color = vec4f(-base_normal[extra_index_storage_buffer[instanceIndex*6+vertexIndex]].xyz, 1.0);
-            // vsOut.color = vec4f(base_normal[extra_index_storage_buffer[instanceIndex*6+vertexIndex]].x,0,0.0, 1.0);
+
+            // vsOut.position = uni.matrix * vec4f(p*5 - normal*2, 1);
+            // vsOut.position = uni.matrix * vec4f(p*5 + textureValue*20, 1);
+            // vsOut.color = vec4f(-normal, 1.0);
+            vsOut.color = vec4f(normal, 1.0);
             return vsOut;
         }
 
         @fragment fn fs(vsOut: VSOutput) -> @location(0) vec4f {
             let temp = textureSample(object_texture, sampler0, vsOut.texcoord); // textureLoad 뽑아내면 될듯
-            return temp;
+            // return vec4f(temp.xyz*5 - 2.5, 1);
             // return vec4f(vsOut.texcoord, 0, 1);
             // return vec4f(0.5, 0, 0, 1);
             // return vsOut.color;
+            return vec4f(vsOut.texcoord1.x*5 -2.5, vsOut.texcoord1.x*5 -2.5, vsOut.texcoord1.x*5 -2.5, 1);
         }
         `,
     });
@@ -884,75 +864,7 @@ export async function createPipelines(device, presentationFormat) {
             entryPoint: 'cs',
         },
     });
-
-    const xyzModule = device.createShaderModule({
-        label: 'xyz module',
-        code: /*wgsl*/ `
-            struct OurVertexShaderOutput {
-                @builtin(position) position: vec4f,
-                @location(0) color: vec4f,
-            };
-
-            struct Uniforms {
-                matrix: mat4x4f,
-            };
-
-            @group(0) @binding(0) var<uniform> uni: Uniforms;
-
-            @vertex fn vs(
-                @builtin(vertex_index) vertexIndex : u32
-            ) -> OurVertexShaderOutput {
-                let pos = array(
-                // x축
-                vec3f( -1.0,  0.0,  0.0 ),
-                vec3f(  1.0,  0.0,  0.0 ),
-                // y축
-                vec3f(  0.0, -1.0,  0.0 ),
-                vec3f(  0.0,  1.0,  0.0 ),
-                // z축
-                vec3f(  0.0,  0.0, -1.0 ),
-                vec3f(  0.0,  0.0,  1.0 ),
-                );
-                let color = array(
-                vec4f(1, 0, 0, 1),
-                vec4f(0, 1, 0, 1),
-                vec4f(0, 0, 1, 1),
-                );
-
-                _ = uni;
-
-                var vsOutput: OurVertexShaderOutput;
-                let xyz = pos[vertexIndex];
-                vsOutput.position = uni.matrix * vec4f(xyz*100, 1.0);
-                vsOutput.color = color[vertexIndex/2];
-                return vsOutput;
-            }
-
-            @fragment fn fs(fsInput: OurVertexShaderOutput) -> @location(0) vec4f {
-                return fsInput.color;
-            }
-        `,
-    });
-
-    const xyzPipeline = device.createRenderPipeline({
-        label: 'hardcoded textured quad pipeline',
-        layout: 'auto',
-        vertex: {
-          module: xyzModule,
-          entry: 'vs',
-        },
-        fragment: {
-          module: xyzModule,
-          entry: 'fs',
-          targets: [{ format: presentationFormat }],
-        },
-        primitive: {
-          topology: 'line-list',
-          listIndexFormat: 'uint32',
-          // cullMode: 'back',
-        },
-    });
-
-    return { pipeline_PatchTexture, pipeline_Face, pipeline_Edge, pipeline_Vertex, 
-            pipelines, pipeline2, pipelineAnime, xyzPipeline, pipeline_Limit };
+    
+    return { pipeline_Face, pipeline_Edge, pipeline_Vertex, 
+            pipelines, pipeline2, pipelineAnime, pipeline_Limit };
 }

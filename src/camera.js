@@ -122,3 +122,124 @@ export class Camera {
     }
 
 }
+
+export function handleKeyUp(ev) {
+    switch (ev.key) {
+        case 'w':
+            camera.moveUp(keyValue);
+            break;
+        case 's':
+            camera.moveDown(keyValue);
+            break;
+        case 'a':
+            camera.moveLeft(keyValue);
+            break;
+        case 'd':
+            camera.moveRight(keyValue);
+            break;
+        case 'Shift':
+            shiftValue = 0;
+            break;
+        case ' ':
+            if(spaceCheck == 0) spaceCheck = 1;
+            else spaceCheck = 0;
+            break;
+        default:
+            //return;
+    }
+    console.log(ev);
+}
+
+export function handleKeyDown(ev) {
+    switch (ev.key) {
+        case 'Shift':
+            shiftValue = 1;
+            break;
+        default:
+            //return;
+    }
+}
+
+export function mouse_move(canvas, camera) {
+    let lastX;
+    let lastY;
+    let dragging = false;
+    let selectedPointIndex = null;
+    let spaceCheck = false;
+
+    let keyValue = 1;
+    let shiftValue = 0;
+    document.addEventListener('keyup', handleKeyUp);
+    document.addEventListener('keydown', handleKeyDown);
+    canvas.onwheel = function(ev)
+    {
+        camera.moveForward(ev.deltaY*0.1);
+    }
+    canvas.onmousedown = function(ev)
+    {
+        if(spaceCheck == 0)
+        {
+            let x = ev.clientX, y = ev.clientY;
+            let bb = ev.target.getBoundingClientRect();
+            if (bb.left <= x && x < bb.right && bb.top <= y && y < bb.bottom)
+            {
+                lastX = x;
+                lastY = y;
+                dragging = true;
+            }
+        }
+        else
+        {
+            let rect = canvas.getBoundingClientRect();
+            let x = (ev.clientX - rect.left) / canvas.clientWidth * 2 - 1; // NDC X
+            let y = -(ev.clientY - rect.top) / canvas.clientHeight * 2 + 1; // NDC Y
+
+            // 포인트 선택 로직
+            getPickedVertexIndex(x, y).then(index => {
+                if (index !== null) {
+                    selectedPointIndex = index;
+                    dragging = true;
+                }
+            });
+        }
+    }
+    canvas.onmouseup = function(ev) { dragging = false; selectedPointIndex = null; };
+    canvas.onmousemove = function(ev)
+    {
+        if(spaceCheck == 0)
+        {
+            let x = ev.clientX;
+            let y = ev.clientY;
+            if(dragging)
+            {
+                let offset = [x - lastX, y - lastY];
+                if(offset[0] != 0 || offset[1] != 0) // For some reason, the offset becomes zero sometimes...
+                {
+                    console.log(shiftValue);
+                    if(shiftValue == 0)
+                        camera.rotate(offset[0] * -0.01, offset[1] * -0.01);
+                    else
+                    {
+                        camera.moveLeft(offset[0] * keyValue * 0.01);
+                        camera.moveUp(offset[1] * keyValue * 0.01);
+                    }
+                }
+            }
+            lastX = x;
+            lastY = y;
+        }
+        else
+        {
+            if (dragging && (selectedPointIndex != null)) {
+                let rect = canvas.getBoundingClientRect();
+                let x = (ev.clientX - rect.left) / canvas.clientWidth * 2 - 1; // NDC X
+                let y = -(ev.clientY - rect.top) / canvas.clientHeight * 2 + 1; // NDC Y
+
+                // 포인트 위치 업데이트 로직
+                updatePointPosition(selectedPointIndex, x, y);
+            }
+        }
+    }
+
+    return canvas, keyValue;
+}

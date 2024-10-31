@@ -1,69 +1,4 @@
-import {createFVertices} from './createFVertices.js';
-
-export function createBufferData(device, obj, level, limit) {
-    const vertex_F = new Int32Array(obj[level].data.f_indices);
-    const offset_F = new Int32Array(obj[level].data.f_offsets);
-    const valance_F = new Int32Array(obj[level].data.f_valances);
-    const pointIdx_F = new Int32Array(obj[level].data.f_data);
-
-    const vertex_E = new Int32Array(obj[level].data.e_indices);
-    const pointIdx_E = new Int32Array(obj[level].data.e_data);
-
-    const vertex_V = new Int32Array(obj[level].data.v_indices);
-    const offset_V = new Int32Array(obj[level].data.v_offsets);
-    const valance_V = new Int32Array(obj[level].data.v_valances);
-    const index_V = new Int32Array(obj[level].data.v_index);
-    const pointIdx_V = new Int32Array(obj[level].data.v_data);
-
-    const size = vertex_F.byteLength*4 + vertex_E.byteLength*4 + vertex_V.byteLength*4;
-
-    // Create buffers for face, edge, and vertex data
-    const vertex_Buffer_F = device.createBuffer({size: vertex_F.byteLength, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST});
-    const offset_Buffer_F = device.createBuffer({size: offset_F.byteLength, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST});
-    const valance_Buffer_F = device.createBuffer({size: valance_F.byteLength, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST});
-    const pointIdx_Buffer_F = device.createBuffer({size: pointIdx_F.byteLength, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST});
-
-    const vertex_Buffer_E = device.createBuffer({size: vertex_E.byteLength, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST});
-    const pointIdx_Buffer_E = device.createBuffer({size: pointIdx_E.byteLength, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST});
-
-    const vertex_Buffer_V = device.createBuffer({size: vertex_V.byteLength, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST});
-    const offset_Buffer_V = device.createBuffer({size: offset_V.byteLength, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST});
-    const valance_Buffer_V = device.createBuffer({size: valance_V.byteLength, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST});
-    const index_Buffer_V = device.createBuffer({size: index_V.byteLength, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST});
-    const pointIdx_Buffer_V = device.createBuffer({size: pointIdx_V.byteLength, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST});
-
-    // Write data to buffers
-    device.queue.writeBuffer(vertex_Buffer_F, 0, vertex_F);
-    device.queue.writeBuffer(offset_Buffer_F, 0, offset_F);
-    device.queue.writeBuffer(valance_Buffer_F, 0, valance_F);
-    device.queue.writeBuffer(pointIdx_Buffer_F, 0, pointIdx_F);
-
-    device.queue.writeBuffer(vertex_Buffer_E, 0, vertex_E);
-    device.queue.writeBuffer(pointIdx_Buffer_E, 0, pointIdx_E);
-
-    device.queue.writeBuffer(vertex_Buffer_V, 0, vertex_V);
-    device.queue.writeBuffer(offset_Buffer_V, 0, offset_V);
-    device.queue.writeBuffer(valance_Buffer_V, 0, valance_V);
-    device.queue.writeBuffer(index_Buffer_V, 0, index_V);
-    device.queue.writeBuffer(pointIdx_Buffer_V, 0, pointIdx_V);
-
-    return {
-        vertex_Buffer_F,
-        offset_Buffer_F,
-        valance_Buffer_F,
-        pointIdx_Buffer_F,
-        vertex_Buffer_E,
-        pointIdx_Buffer_E,
-        vertex_Buffer_V,
-        offset_Buffer_V,
-        valance_Buffer_V,
-        index_Buffer_V,
-        pointIdx_Buffer_V,
-        size,
-    };
-}
-
-export function createBindGroup_PatchTexture(device, depth, pipeline_PatchTexture, connectivityStorageBuffers, base_UVStorageBuffers, 
+export function createBindGroup_PatchTexture(device, depth, pipeline_PatchTexture, connectivityStorageBuffers, base_UVStorageBuffers,
                                             textureBuffer, texture) {
     let bindGroups_PatchTexture = [];
     for(let i=0; i<=depth; i++)
@@ -127,11 +62,8 @@ export function createBindGroup(device, pipeline_Face, pipeline_Edge, pipeline_V
     };
 }
 
-
-
 export async function changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer, Base_Normal_Buffer, texture, sampler, textureBuffer,
-    connectivityStorageBuffers, base_UVStorageBuffers, OrdinaryPointData, extra_base_UVStorageBuffers, 
-    pipelines, pipeline2, pipelineAnime, depth, settings)
+    connectivityStorageBuffers, base_UVStorageBuffers, pipelines, pipelineAnime, depth)
 {
     const color0 = new Float32Array([0.5, 0.5, 0.5, 1, 0, 0, 0, 0]);
     const color1 = new Float32Array([1, 0.5, 0.5, 1, 0.0001, 0.0001, 0.0001, 0]);
@@ -154,6 +86,56 @@ export async function changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer
         device.queue.writeBuffer(colorStorageBuffers[i], 0, colors[i]);
     }
 
+    const animeBindGroup = device.createBindGroup({
+        label: 'bind group for anime',
+        layout: pipelineAnime.getBindGroupLayout(0),
+        entries: [
+            { binding: 0, resource: { buffer: uniformBuffer } },
+            { binding: 1, resource: { buffer: Base_Vertex_Buffer } },
+        ],
+    });
+
+    const fixedBindGroups = [];
+    let changedBindGroups = [];
+
+    for (let i = 0; i < 3; i++) {
+        fixedBindGroups.push(device.createBindGroup({
+            label: 'fixedbind group for object',
+            layout: pipelines[i].getBindGroupLayout(0),
+            entries: [
+                { binding: 0, resource: { buffer: uniformBuffer } },
+                { binding: 1, resource: { buffer: Base_Vertex_Buffer } },
+                { binding: 2, resource: { buffer: Base_Normal_Buffer } },
+                { binding: 3, resource: texture.createView() },
+                { binding: 4, resource: sampler },
+                { binding: 5, resource: { buffer: textureBuffer } },
+            ],
+        }));
+        for(let j=0; j<=depth; j++)
+        {
+            changedBindGroups.push(device.createBindGroup({
+                label: 'bind group for object',
+                layout: pipelines[i].getBindGroupLayout(1),
+                entries: [
+                    { binding: 0, resource: { buffer: connectivityStorageBuffers[j] } },
+                    { binding: 1, resource: { buffer: base_UVStorageBuffers[j] } },
+                    { binding: 2, resource: { buffer: colorStorageBuffers[j] } },
+                ],
+            }));
+        }
+    }
+
+    return {
+        fixedBindGroups,
+        animeBindGroup,
+        changedBindGroups
+    };
+
+}
+
+export async function extraBindGroup(device, uniformBuffer, OrdinaryPointData, Base_Vertex_Buffer, Base_Normal_Buffer, texture, sampler,
+    extra_base_UVStorageBuffers, extra_vertex_offsetStorageBuffers, pipeline2, depth, settings)
+{
     let OrdinaryPointBuffers = [];
     let OrdinaryStorageBuffers = [];
     for(let i=0; i<=depth; i++)
@@ -179,56 +161,56 @@ export async function changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer
             { binding: 0, resource: { buffer: uniformBuffer } },
             { binding: 1, resource: { buffer: OrdinaryStorageBuffers[settings.getProterty('ordinaryLevel')] } },
             { binding: 2, resource: { buffer: extra_base_UVStorageBuffers[settings.getProterty('ordinaryLevel')] } },
-            { binding: 3, resource: texture.createView() },
-            { binding: 4, resource: sampler },
-            { binding: 5, resource: { buffer: Base_Vertex_Buffer } },
-            { binding: 6, resource: { buffer: Base_Normal_Buffer } },
+            { binding: 3, resource: { buffer: extra_vertex_offsetStorageBuffers[settings.getProterty('ordinaryLevel')] } },
+            { binding: 4, resource: texture.createView() },
+            { binding: 5, resource: sampler },
+            { binding: 6, resource: { buffer: Base_Vertex_Buffer } },
+            { binding: 7, resource: { buffer: Base_Normal_Buffer } },
         ],
     });
-    const animeBindGroup = device.createBindGroup({
-        label: 'bind group for anime',
-        layout: pipelineAnime.getBindGroupLayout(0),
+
+    return OrdinaryPointfixedBindGroup;
+}
+
+export async function createBindGroup_Limit(device, pipeline_Limit, Base_Vertex_Buffer, Base_Normal_Buffer, limit_Buffers, settings)
+{
+    const bindGroup_Limit = device.createBindGroup({
+        label: `bindGroup for Limit`,
+        layout: pipeline_Limit.getBindGroupLayout(0),
         entries: [
-            { binding: 0, resource: { buffer: uniformBuffer } },
-            { binding: 1, resource: { buffer: Base_Vertex_Buffer } },
+            {binding: 0, resource: {buffer: Base_Vertex_Buffer}},
+            {binding: 1, resource: {buffer: limit_Buffers[3]}},
+            {binding: 2, resource: {buffer: Base_Normal_Buffer}},
         ],
     });
 
-    const fixedBindGroups = [];
-    let changedBindGroups = [];
-
-    for (let i = 0; i < 3; i++) {
-        fixedBindGroups.push(device.createBindGroup({
-            label: 'fixedbind group for object',
-            layout: pipelines[i].getBindGroupLayout(0),
-            entries: [
-                { binding: 0, resource: { buffer: uniformBuffer } },
-                { binding: 1, resource: { buffer: Base_Vertex_Buffer } },
-                { binding: 2, resource: texture.createView() },
-                { binding: 3, resource: sampler },
-                { binding: 4, resource: { buffer: textureBuffer } },
-            ],
-        }));
-        for(let j=0; j<=depth; j++)
-        {
-            changedBindGroups.push(device.createBindGroup({
-                label: 'bind group for object',
-                layout: pipelines[i].getBindGroupLayout(1),
-                entries: [
-                    { binding: 0, resource: { buffer: connectivityStorageBuffers[j] } },
-                    { binding: 1, resource: { buffer: base_UVStorageBuffers[j] } },
-                    { binding: 2, resource: { buffer: colorStorageBuffers[j] } },
-                ],
-            }));
-        }
-    }
+    // const readBuffer = device.createBuffer({
+    //     size: 4000,
+    //     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+    //     });
     
-    return {
-        fixedBindGroups,
-        OrdinaryPointfixedBindGroup,
-        OrdinaryPointBuffers,
-        animeBindGroup,
-        changedBindGroups
-    };
+    // // 2. GPU에서 데이터 복사
+    // const commandEncoder = device.createCommandEncoder();
+    // commandEncoder.copyBufferToBuffer(
+    // limit_Buffers[settings.getProterty('ordinaryLevel')],    // 소스 버퍼 (GPU 연산 결과가 저장된 버퍼)
+    // 0,            // 소스 버퍼의 오프셋
+    // readBuffer,   // 대상 버퍼 (CPU에서 읽을 수 있는 버퍼)
+    // 0,            // 대상 버퍼의 오프셋
+    // 1000    // 복사할 데이터의 크기
+    // );
+    // const commands = commandEncoder.finish();
+    // device.queue.submit([commands]);
 
+    // // GPU 작업 완료 대기 후 버퍼 맵핑 및 읽기
+    // device.queue.onSubmittedWorkDone().then(async () => {
+    //     await readBuffer.mapAsync(GPUMapMode.READ);
+    //     const arrayBuffer = readBuffer.getMappedRange();
+    //     const data = new Uint32Array(arrayBuffer);
+    //     console.log('Read data:', data);
+    //     readBuffer.unmap();
+    // }).catch((error) => {
+    //     console.error('Error reading buffer:', error);
+    // });
+
+    return bindGroup_Limit;
 }
