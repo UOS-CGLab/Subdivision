@@ -33,25 +33,9 @@ export async function initializeWebGPU() {
 }
 
 export async function fetchData(myString) {
-    let data, data2, data3;
-    try {
-        data = await fetch('./../' + myString + '/topology.json');
-    } catch (error) {
-        data = await fetch('./Subdivision' + myString + '/topology.json');
-    }
-
-    try {
-        data2 = await fetch('./../' + myString + '/base.json');
-    } catch (error) {
-        data2 = await fetch('./Subdivision' + myString + '/base.json');
-    }
-
-    try {
-        data3 = await fetch('./../' + myString + '/limit_point.json');
-    } catch (error) {
-        data3 = await fetch('./Subdivision' + myString + '/limit_point.json');
-    }
-
+    const data = await fetch('./' + myString + '/topology.json');
+    const data2 = await fetch('./' + myString + '/base.json');
+    const data3 = await fetch('./' + myString + '/limit_point.json');
     const obj = await data.json();
     const base =await data2.json();
     const limit = await data3.json();
