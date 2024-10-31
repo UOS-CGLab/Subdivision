@@ -13,10 +13,19 @@ const depth = 4;
 
 async function main() {
     let { canvas, device, context, presentationFormat, canTimestamp } = await initializeWebGPU();
-    const { obj, base, animationBase, limit } = await fetchData(myString);
+    const { obj, Base_Vertex, animationBase, limit } = await fetchData(myString);
     const camera = new Camera();
     let keyValue = 1;
     canvas, keyValue = mouse_move(canvas, camera);
+    let settings = initializeScene();
+
+    let then = 0;
+    let depthTexture;
+    const infoElem = document.querySelector('#info');
+    let gpuTime = 0;
+
+    let narray = [1, 1, 1, 1, 1, 1, 1, 1];
+    let pipelineValue = 1;
 
     let { uniformBuffer, uniformValues, matrixValue, viewValue, timeValue, wrieValue} = uniform_buffers(device);
 
@@ -108,45 +117,17 @@ async function main() {
         }),
     };
 
-    let Base_Vertex = new Float32Array(base.Base_Vertex);
-    let settings = initializeScene();
-
-    let then = 0;
-    let depthTexture;
-    const infoElem = document.querySelector('#info');
-    let gpuTime = 0;
-
-    let narray = [1, 1, 1, 1, 1, 1, 1, 1];
-
-    let pipelineValue = 1;
-    let ordinaryValue = 1;
-
-    const { pipeline_Face, pipeline_Edge, pipeline_Vertex, 
-            pipelines, pipeline2, pipelineAnime, pipeline_Limit } = await createPipelines(device, presentationFormat);
-
-    const { fixedBindGroups, animeBindGroup, changedBindGroups }
-    = await changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer, Base_Normal_Buffer, texture, sampler, textureBuffer,
-        connectivityStorageBuffers, base_UVStorageBuffers, pipelines, pipelineAnime, depth);
+    const { pipeline_Face, pipeline_Edge, pipeline_Vertex, pipelines, pipeline2, pipelineAnime, pipeline_Limit } = await createPipelines(device, presentationFormat);
+    
+    const { fixedBindGroups, animeBindGroup, changedBindGroups } = await changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer, Base_Normal_Buffer, texture, sampler, textureBuffer, connectivityStorageBuffers, base_UVStorageBuffers, pipelines, pipelineAnime, depth);
+    const OrdinaryPointfixedBindGroup = await extraBindGroup(device, uniformBuffer, OrdinaryPointData, Base_Vertex_Buffer, Base_Normal_Buffer, texture, sampler, extra_base_UVStorageBuffers, extra_vertex_offsetStorageBuffers, pipeline2, depth, settings)
+    const bindGroup_Limit = await createBindGroup_Limit(device, pipeline_Limit, Base_Vertex_Buffer, Base_Normal_Buffer, limit_Buffers, settings);
     
     let bindGroups = [];
-    for (let i=0; i<=depth; i++)
-    {
+    for (let i=0; i<=depth; i++){
         bindGroups.push(createBindGroup(device, pipeline_Face, pipeline_Edge, pipeline_Vertex, Base_Vertex_Buffer, levels[i],i+1));
     }
 
-    const OrdinaryPointfixedBindGroup = await extraBindGroup(device, uniformBuffer, OrdinaryPointData, Base_Vertex_Buffer, Base_Normal_Buffer, texture, sampler, 
-        extra_base_UVStorageBuffers, extra_vertex_offsetStorageBuffers, pipeline2, depth, settings)
-
-    const bindGroup_Limit = await createBindGroup_Limit(device, pipeline_Limit, Base_Vertex_Buffer, Base_Normal_Buffer, limit_Buffers, settings);
-    
-    let computePassData = [];
-    for (let i=0; i<=depth; i++)
-    {
-        computePassData.push({prefix: '_'+(i),
-            bindGroup_Face: bindGroups[i].bindGroup_Face,
-            bindGroup_Edge: bindGroups[i].bindGroup_Edge,
-            bindGroup_Vertex: bindGroups[i].bindGroup_Vertex});
-    }
 
     async function render(now) {
         now *= 0.001;  // convert to seconds
@@ -193,45 +174,17 @@ async function main() {
         // upload the uniform values to the uniform buffer
         device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
 
-        let encoder = device.createCommandEncoder({label : 'base_vertex_buffer animation encoder',});
-        let pass = encoder.beginComputePass();
-        pass.setPipeline(pipelineAnime);
-        pass.setBindGroup(0, animeBindGroup);
-        pass.dispatchWorkgroups(65535);
-        pass.end();
+        make_compute_encoder(device, pipelineAnime, animeBindGroup, 65535, "base_vertex_buffer animation encoder");
 
-        encoder = device.createCommandEncoder({ label : 'base_vertex_buffer update encoder',});
-
-        for (const data of computePassData) {
-            const prefix = data.prefix;
-            const bindGroup_Face = data.bindGroup_Face;
-            const bindGroup_Edge = data.bindGroup_Edge;
-            const bindGroup_Vertex = data.bindGroup_Vertex;
-
-            const pass_Face = encoder.beginComputePass();
-            pass_Face.setPipeline(pipeline_Face);
-            pass_Face.setBindGroup(0, bindGroup_Face);
-            pass_Face.dispatchWorkgroups(65535);
-            pass_Face.end();
-
-            const pass_Edge = encoder.beginComputePass();
-            pass_Edge.setPipeline(pipeline_Edge);
-            pass_Edge.setBindGroup(0, bindGroup_Edge);
-            pass_Edge.dispatchWorkgroups(65535);
-            pass_Edge.end();
-
-            const pass_Vertex = encoder.beginComputePass();
-            pass_Vertex.setPipeline(pipeline_Vertex);
-            pass_Vertex.setBindGroup(0, bindGroup_Vertex);
-            pass_Vertex.dispatchWorkgroups(65535);
-            pass_Vertex.end();
+        for(let i=0; i<=depth; i++) // 등호 확인
+        {
+            make_compute_encoder(device, pipeline_Face, bindGroups[i].bindGroup_Face, 65535, "face_compute_encoder");
+            make_compute_encoder(device, pipeline_Edge, bindGroups[i].bindGroup_Edge, 65535, "edge_compute_encoder");
+            make_compute_encoder(device, pipeline_Vertex, bindGroups[i].bindGroup_Vertex, 65535, "vertex_compute_encoder");
         }
-        let commandBuffer = encoder.finish();
-        device.queue.submit([commandBuffer]);
 
-
-        encoder = device.createCommandEncoder({ label : 'render pipeline encoder',});
-        pass = encoder.beginRenderPass(renderPassDescriptor);
+        let encoder = device.createCommandEncoder({ label : 'render pipeline encoder',});
+        let pass = encoder.beginRenderPass(renderPassDescriptor);
 
         let tesselation = parseInt(settings.getProterty('tesselation'));
         for (let i=0; i<=depth; i++)
@@ -244,7 +197,7 @@ async function main() {
         let N = depth - tesselation;
         if(N <= 0) N = 0;
         for (let i = 0; i <= depth; i++) {
-            device.queue.writeBuffer(vertexBuffers[N][i], 0, texcoordDatas[N][i]);
+            device.queue.writeBuffer(vertexBuffers[N][i], 0, texcoordDatas[N][i]); // settings.onSliderChange('tesselation', tesselation);
             device.queue.writeBuffer(indexBuffers[N][i], 0, indices[N][i]);
         }
         switch (settings.getProterty('pipelineSetting'))
@@ -267,46 +220,33 @@ async function main() {
             }
         }
         pass.end();
-        commandBuffer = encoder.finish();
+        let commandBuffer = encoder.finish();
         device.queue.submit([commandBuffer]);
 
-        // Limit
+        // for(let i=0; i<=depth; i++)
+        // {
+        //     if(settings.getProterty('draw')[i] == true) {
+        //         let j = i;
+        //         if (i > 4); j = 4;
+        //         let draw_size = (narray[i] * narray[i] * 6, j * 2 * 1000 + 100000);
+        //     }
+        //     make_render_encoder(device, renderPassDescriptor, pipelines[pipelineValue], changedBindGroups[i+(depth+1)*pipelineValue], vertexBuffers[N][i], indexBuffers[N][i], narray[i] * narray[i] * 6, 'render pipeline encoder');
+        // }
 
-        const encoder2 = device.createCommandEncoder({ label : 'encoder for limit position',});
-        const pass2 = encoder2.beginComputePass({label : 'computepass'});
-        pass2.setPipeline(pipeline_Limit);
-        pass2.setBindGroup(0, bindGroup_Limit);
-        pass2.dispatchWorkgroups(65535);
-        pass2.end();
-        const commandBuffer2 = encoder2.finish();
-        device.queue.submit([commandBuffer2]);
+        // Limit
+        make_compute_encoder(device, pipeline_Limit, bindGroup_Limit, 65535, 'encoder for limit position');
 
         // 커맨드 엔코더 생성
         encoder = device.createCommandEncoder({ label : 'ordinary buffer encoder',});
+
         // 데이터 복사를 위한 커맨드 추가
-        encoder.copyBufferToBuffer(
-            Base_Vertex_Buffer, // 소스 버퍼
-            0, // 소스 오프셋
-            OrdinaryBuffer, // 대상 버퍼
-            0, // 대상 오프셋
-            Base_Vertex_Buffer.size // 복사할 데이터 크기
-        );
-        // 커맨드 제출draw
+        // copyBufferToBuffer(source, sourceOffset, destination, destinationOffset, size)
+        encoder.copyBufferToBuffer(Base_Vertex_Buffer, 0, OrdinaryBuffer, 0, Base_Vertex_Buffer.size);
         commandBuffer = encoder.finish();
         device.queue.submit([commandBuffer]);
 
 
-
-        encoder = device.createCommandEncoder({ label : 'ordinary draw encoder',});
-        pass = encoder.beginRenderPass(renderPassDescriptor2);
-
-        ordinaryValue = settings.getProterty('ordinaryLevel');
-        if(ordinaryValue > depth) ordinaryValue = depth
-        pass.setPipeline(pipeline2);
-        pass.setBindGroup(0, OrdinaryPointfixedBindGroup);
-        pass.setVertexBuffer(0, OrdinaryBuffer);
-        pass.draw(6*10000);
-        pass.end();
+        make_render_encoder(device, renderPassDescriptor2, pipeline2, OrdinaryPointfixedBindGroup, OrdinaryBuffer, false, 6*10000, 65535, 'ordinary draw encoder');
 
         if (canTimestamp) {
             encoder.resolveQuerySet(querySet, 0, querySet.count, resolveBuffer, 0);
@@ -386,5 +326,36 @@ async function main() {
 function max(a, b) {
     return a > b ? a : b;
 }
+
+function make_compute_encoder(device, pipeline, bindgroup, workgroupsize, text = " ") {
+    const encoder = device.createCommandEncoder({label: text});
+    const pass = encoder.beginComputePass({label: text});
+    pass.setPipeline(pipeline);
+    pass.setBindGroup(0, bindgroup);
+    pass.dispatchWorkgroups(workgroupsize);
+    pass.end();
+    const commandBuffer = encoder.finish();
+    device.queue.submit([commandBuffer]);
+}
+
+function make_render_encoder(device, renderPassDescriptor, pipeline, bindgroup, vertexBuffer, indexBuffer = false, draw_size, text = " ") {
+    const encoder = device.createCommandEncoder({label: text});
+    const pass = encoder.beginRenderPass(renderPassDescriptor, {label: text});
+    pass.setPipeline(pipeline);
+    pass.setBindGroup(0, bindgroup);
+    pass.setVertexBuffer(0, vertexBuffer);
+    if(indexBuffer){
+        pass.setIndexBuffer(indexBuffer, 'uint32');
+        pass.drawIndexed(draw_size);// parameter가 2개여야 한다.
+    }
+    else {
+        pass.draw(draw_size);
+    }
+    pass.end();
+    const commandBuffer = encoder.finish();
+    device.queue.submit([commandBuffer]);
+}
+
+
 
 main();

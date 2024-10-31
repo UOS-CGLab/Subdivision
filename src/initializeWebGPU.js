@@ -37,7 +37,7 @@ export async function fetchData(myString) {
     const data2 = await fetch('./../'+myString+'/base.json');
     const data3 = await fetch('../'+myString+'/limit_point.json');
     const obj = await data.json();
-    const base = await data2.json();
+    const base =await data2.json();
     const limit = await data3.json();
 
     console.log(limit);
@@ -48,6 +48,8 @@ export async function fetchData(myString) {
     img.src = './'+myString+'/d512.bmp';
     await img.decode();
 
-    return { obj, base, animationBase, limit };
+    let Base_Vertex =  new Float32Array(base.Base_Vertex);
+
+    return { obj, Base_Vertex, animationBase, limit };
 }
 
