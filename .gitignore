@@ -1,0 +1,57 @@
+# macOS files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# macOS resource forks
+._*
+
+# Thumbnails
+Thumbs.db
+
+# Finder directory settings
+.DS_Store
+
+# Trash folder which may appear on any disk
+.Trashes
+
+# macOS Spotlight files
+.Spotlight-V100
+.fseventsd
+
+# macOS Volume info
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# macOS folder settings
+Icon?
+.metadata_never_index
+.noindex
+
+# IntelliJ IDEA project files
+.idea/
+*.iml
+out/
+
+# Node.js dependencies
+node_modules/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# dotenv environment variables
+.env
+.env.local
+.env.*.local
+
+# Build output
+dist/
+build/
