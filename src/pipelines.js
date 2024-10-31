@@ -589,7 +589,7 @@ export async function createPipelines(device, presentationFormat) {
         }
 
         @fragment fn fs(vsOut: VSOutput) -> @location(0) vec4f {
-            let temp = textureSample(object_texture, sampler0, vsOut.texcoord); // textureLoad 뽑아내면 될듯
+            // let temp = textureSample(object_texture, sampler0, vsOut.texcoord); // textureLoad 뽑아내면 될듯
             // if(vsOut.normal.z < 0.0)
             // {
             //     discard;
@@ -598,7 +598,7 @@ export async function createPipelines(device, presentationFormat) {
             // {
             //     return vec4f(0, 0, 0, 1);
             // }
-            // return vec4f(vsOut.normal, 1);
+            // return vec4f(vsOut.color);
             // return vec4f(temp.xyz*5 - 2.5, 1);
             return vec4f(vsOut.texcoord1.x*5 -2.5, vsOut.texcoord1.x*5 -2.5, vsOut.texcoord1.x*5 -2.5, 1);
         }

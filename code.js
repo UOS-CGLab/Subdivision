@@ -121,8 +121,6 @@ async function main() {
     const { pipeline_Face, pipeline_Edge, pipeline_Vertex, pipelines, pipeline2, pipelineAnime, pipeline_Limit } = await createPipelines(device, presentationFormat);
     
     const { fixedBindGroups, animeBindGroup, changedBindGroups } = await changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer, Base_Normal_Buffer, texture, sampler, textureBuffer, connectivityStorageBuffers, base_UVStorageBuffers, pipelines, pipelineAnime, depth);
-    const OrdinaryPointfixedBindGroup = await extraBindGroup(device, uniformBuffer, OrdinaryPointData, Base_Vertex_After_Buffer, Base_Normal_Buffer, texture, sampler, extra_base_UVStorageBuffers, extra_vertex_offsetStorageBuffers, pipeline2, depth, settings)
-    const bindGroup_Limit = await createBindGroup_Limit(device, pipeline_Limit, Base_Vertex_After_Buffer, Base_Normal_Buffer, limit_Buffers, settings);
     
     let bindGroups = [];
     for (let i=0; i<=depth; i++){
@@ -190,7 +188,11 @@ async function main() {
         encoder.copyBufferToBuffer(Base_Vertex_Buffer, 0, Base_Vertex_After_Buffer, 0, Base_Vertex_Buffer.size);
         let commandBuffer = encoder.finish();
         device.queue.submit([commandBuffer]);
+        
 
+        const zeroData = new Float32Array(Base_Vertex_Buffer.size/4).fill(0);
+        await device.queue.writeBuffer(Base_Normal_Buffer, 0, zeroData);
+        const bindGroup_Limit = await createBindGroup_Limit(device, pipeline_Limit, Base_Vertex_After_Buffer, Base_Normal_Buffer, limit_Buffers, settings);
         // Limit
         make_compute_encoder(device, pipeline_Limit, bindGroup_Limit, 65535, 'encoder for limit position');
 
@@ -245,6 +247,8 @@ async function main() {
         //     }
         //     make_render_encoder(device, renderPassDescriptor, pipelines[pipelineValue], changedBindGroups[i+(depth+1)*pipelineValue], vertexBuffers[N][i], indexBuffers[N][i], narray[i] * narray[i] * 6, 'render pipeline encoder');
         // }
+
+        const OrdinaryPointfixedBindGroup = await extraBindGroup(device, uniformBuffer, OrdinaryPointData, Base_Vertex_After_Buffer, Base_Normal_Buffer, texture, sampler, extra_base_UVStorageBuffers, extra_vertex_offsetStorageBuffers, pipeline2, depth, settings)
 
         encoder = device.createCommandEncoder({ label : 'ordinary buffer encoder',});
         encoder.copyBufferToBuffer(Base_Vertex_Buffer, 0, OrdinaryBuffer, 0, Base_Vertex_Buffer.size);
