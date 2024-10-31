@@ -373,30 +373,11 @@ export async function buffers(device, depth, obj, limit, myString){
         limit_Buffers.push(limit_Buffer);
     }
 
-    const readBuffer = device.createBuffer({
-        size: 4000,
-        usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-        });
-    
-        // 2. GPU에서 데이터 복사
-        const commandEncoder = device.createCommandEncoder();
-        commandEncoder.copyBufferToBuffer(
-        limit_Buffers[3],    // 소스 버퍼 (GPU 연산 결과가 저장된 버퍼)
-        0,            // 소스 버퍼의 오프셋
-        readBuffer,   // 대상 버퍼 (CPU에서 읽을 수 있는 버퍼)
-        0,            // 대상 버퍼의 오프셋
-        1000    // 복사할 데이터의 크기
-        );
-        const commands = commandEncoder.finish();
-        device.queue.submit([commands]);
-    
-        // 3. 버퍼를 맵핑하여 데이터 읽기
-        await device.queue.onSubmittedWorkDone();
-        await readBuffer.mapAsync(GPUMapMode.READ);
-        const arrayBuffer = readBuffer.getMappedRange();
-        const data = new Uint32Array(arrayBuffer);
-        console.log('Read data:', data);
-        readBuffer.unmap();
+    const OrdinaryBuffer = device.createBuffer({
+        label: 'OrdinaryBuffer',
+        size: Base_Vertex_Buffer.size,
+        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    });
 
     return { 
         levels,
@@ -414,6 +395,7 @@ export async function buffers(device, depth, obj, limit, myString){
         OrdinaryPointData,
         texture,
         sampler,
-        limit_Buffers
+        limit_Buffers,
+        OrdinaryBuffer
     }
 }

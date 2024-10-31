@@ -179,7 +179,7 @@ export async function createBindGroup_Limit(device, pipeline_Limit, Base_Vertex_
         layout: pipeline_Limit.getBindGroupLayout(0),
         entries: [
             {binding: 0, resource: {buffer: Base_Vertex_Buffer}},
-            {binding: 1, resource: {buffer: limit_Buffers[3]}},
+            {binding: 1, resource: {buffer: limit_Buffers[settings.getProterty('ordinaryLevel')]}},
             {binding: 2, resource: {buffer: Base_Normal_Buffer}},
         ],
     });
