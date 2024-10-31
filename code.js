@@ -13,7 +13,7 @@ const depth = 4;
 
 async function main() {
     let { canvas, device, context, presentationFormat, canTimestamp } = await initializeWebGPU();
-    const { obj, Base_Vertex, animationBase, limit } = await fetchData(myString);
+    let { obj, Base_Vertex, animationBase, limit } = await fetchData(myString);
     const camera = new Camera();
     let keyValue = 1;
     canvas, keyValue = mouse_move(canvas, camera);
@@ -46,6 +46,7 @@ async function main() {
         texture,
         sampler,
         limit_Buffers,
+        Base_Vertex_After_Buffer,
         OrdinaryBuffer
     } = await buffers(device, depth, obj, limit, myString);
 
@@ -120,8 +121,8 @@ async function main() {
     const { pipeline_Face, pipeline_Edge, pipeline_Vertex, pipelines, pipeline2, pipelineAnime, pipeline_Limit } = await createPipelines(device, presentationFormat);
     
     const { fixedBindGroups, animeBindGroup, changedBindGroups } = await changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer, Base_Normal_Buffer, texture, sampler, textureBuffer, connectivityStorageBuffers, base_UVStorageBuffers, pipelines, pipelineAnime, depth);
-    const OrdinaryPointfixedBindGroup = await extraBindGroup(device, uniformBuffer, OrdinaryPointData, Base_Vertex_Buffer, Base_Normal_Buffer, texture, sampler, extra_base_UVStorageBuffers, extra_vertex_offsetStorageBuffers, pipeline2, depth, settings)
-    const bindGroup_Limit = await createBindGroup_Limit(device, pipeline_Limit, Base_Vertex_Buffer, Base_Normal_Buffer, limit_Buffers, settings);
+    const OrdinaryPointfixedBindGroup = await extraBindGroup(device, uniformBuffer, OrdinaryPointData, Base_Vertex_After_Buffer, Base_Normal_Buffer, texture, sampler, extra_base_UVStorageBuffers, extra_vertex_offsetStorageBuffers, pipeline2, depth, settings)
+    const bindGroup_Limit = await createBindGroup_Limit(device, pipeline_Limit, Base_Vertex_After_Buffer, Base_Normal_Buffer, limit_Buffers, settings);
     
     let bindGroups = [];
     for (let i=0; i<=depth; i++){
@@ -137,7 +138,7 @@ async function main() {
         const startTime = performance.now();
 
         if(settings.getProterty('animation')){
-            Base_Vertex = new Float32Array(animationBase['Base_Vertex'+String(parseInt(  now%100  )).padStart(2, '0')]); // animation speed
+            Base_Vertex = new Float32Array(animationBase['Base_Vertex'+String(parseInt(  now*100%100  )).padStart(2, '0')]); // animation speed
         }
 
         device.queue.writeBuffer(Base_Vertex_Buffer, 0, Base_Vertex);
@@ -183,7 +184,19 @@ async function main() {
             make_compute_encoder(device, pipeline_Vertex, bindGroups[i].bindGroup_Vertex, 65535, "vertex_compute_encoder");
         }
 
-        let encoder = device.createCommandEncoder({ label : 'render pipeline encoder',});
+
+
+        let encoder = device.createCommandEncoder({ label : 'Base_Vertex_After buffer encoder',});
+        encoder.copyBufferToBuffer(Base_Vertex_Buffer, 0, Base_Vertex_After_Buffer, 0, Base_Vertex_Buffer.size);
+        let commandBuffer = encoder.finish();
+        device.queue.submit([commandBuffer]);
+
+        // Limit
+        make_compute_encoder(device, pipeline_Limit, bindGroup_Limit, 65535, 'encoder for limit position');
+
+
+
+        encoder = device.createCommandEncoder({ label : 'render pipeline encoder',});
         let pass = encoder.beginRenderPass(renderPassDescriptor);
 
         let tesselation = parseInt(settings.getProterty('tesselation'));
@@ -220,7 +233,7 @@ async function main() {
             }
         }
         pass.end();
-        let commandBuffer = encoder.finish();
+        commandBuffer = encoder.finish();
         device.queue.submit([commandBuffer]);
 
         // for(let i=0; i<=depth; i++)
@@ -233,18 +246,8 @@ async function main() {
         //     make_render_encoder(device, renderPassDescriptor, pipelines[pipelineValue], changedBindGroups[i+(depth+1)*pipelineValue], vertexBuffers[N][i], indexBuffers[N][i], narray[i] * narray[i] * 6, 'render pipeline encoder');
         // }
 
-        // Limit
-        make_compute_encoder(device, pipeline_Limit, bindGroup_Limit, 65535, 'encoder for limit position');
-
-        // 커맨드 엔코더 생성
         encoder = device.createCommandEncoder({ label : 'ordinary buffer encoder',});
-
-        // 데이터 복사를 위한 커맨드 추가
-        // copyBufferToBuffer(source, sourceOffset, destination, destinationOffset, size)
         encoder.copyBufferToBuffer(Base_Vertex_Buffer, 0, OrdinaryBuffer, 0, Base_Vertex_Buffer.size);
-        commandBuffer = encoder.finish();
-        device.queue.submit([commandBuffer]);
-
 
         make_render_encoder(device, renderPassDescriptor2, pipeline2, OrdinaryPointfixedBindGroup, OrdinaryBuffer, false, 6*10000, 65535, 'ordinary draw encoder');
 

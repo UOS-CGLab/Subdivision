@@ -133,7 +133,7 @@ export async function changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer
 
 }
 
-export async function extraBindGroup(device, uniformBuffer, OrdinaryPointData, Base_Vertex_Buffer, Base_Normal_Buffer, texture, sampler,
+export async function extraBindGroup(device, uniformBuffer, OrdinaryPointData, Base_Vertex_After_Buffer, Base_Normal_Buffer, texture, sampler,
     extra_base_UVStorageBuffers, extra_vertex_offsetStorageBuffers, pipeline2, depth, settings)
 {
     let OrdinaryPointBuffers = [];
@@ -164,7 +164,7 @@ export async function extraBindGroup(device, uniformBuffer, OrdinaryPointData, B
             { binding: 3, resource: { buffer: extra_vertex_offsetStorageBuffers[settings.getProterty('ordinaryLevel')] } },
             { binding: 4, resource: texture.createView() },
             { binding: 5, resource: sampler },
-            { binding: 6, resource: { buffer: Base_Vertex_Buffer } },
+            { binding: 6, resource: { buffer: Base_Vertex_After_Buffer } },
             { binding: 7, resource: { buffer: Base_Normal_Buffer } },
         ],
     });
@@ -172,13 +172,13 @@ export async function extraBindGroup(device, uniformBuffer, OrdinaryPointData, B
     return OrdinaryPointfixedBindGroup;
 }
 
-export async function createBindGroup_Limit(device, pipeline_Limit, Base_Vertex_Buffer, Base_Normal_Buffer, limit_Buffers, settings)
+export async function createBindGroup_Limit(device, pipeline_Limit, Base_Vertex_After_Buffer, Base_Normal_Buffer, limit_Buffers, settings)
 {
     const bindGroup_Limit = device.createBindGroup({
         label: `bindGroup for Limit`,
         layout: pipeline_Limit.getBindGroupLayout(0),
         entries: [
-            {binding: 0, resource: {buffer: Base_Vertex_Buffer}},
+            {binding: 0, resource: {buffer: Base_Vertex_After_Buffer}},
             {binding: 1, resource: {buffer: limit_Buffers[settings.getProterty('ordinaryLevel')]}},
             {binding: 2, resource: {buffer: Base_Normal_Buffer}},
         ],

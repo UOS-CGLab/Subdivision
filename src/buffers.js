@@ -379,6 +379,12 @@ export async function buffers(device, depth, obj, limit, myString){
         usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
 
+    const Base_Vertex_After_Buffer = device.createBuffer({
+        label: 'BaseBuffer',
+        size: Base_Vertex_Buffer.size,
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    });
+
     return { 
         levels,
         connectivityStorageBuffers,
@@ -396,6 +402,7 @@ export async function buffers(device, depth, obj, limit, myString){
         texture,
         sampler,
         limit_Buffers,
+        Base_Vertex_After_Buffer,
         OrdinaryBuffer
     }
 }
