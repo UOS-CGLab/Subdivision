@@ -4,7 +4,7 @@ import { initializeWebGPU, fetchData } from './src/initializeWebGPU.js';
 import { initializeScene } from './src/gui.js';
 import { createBindGroup_PatchTexture, createBindGroup, changedBindGroup, extraBindGroup, createBindGroup_Limit } from './src/createBindGroups.js';
 import { createPipelines } from './src/pipelines.js';
-import { Camera, mouse_move} from './src/camera.js';
+import { Camera, mouse_move, addkeyboardEvent} from './src/camera.js';
 
 import { uniform_buffers, buffers} from './src/buffers.js';
 
@@ -17,6 +17,8 @@ async function main() {
     const camera = new Camera();
     let keyValue = 1;
     canvas, keyValue = mouse_move(canvas, camera);
+    addkeyboardEvent(camera)
+
     let settings = initializeScene();
 
     let then = 0;
@@ -126,7 +128,6 @@ async function main() {
     for (let i=0; i<=depth; i++){
         bindGroups.push(createBindGroup(device, pipeline_Face, pipeline_Edge, pipeline_Vertex, Base_Vertex_Buffer, levels[i],i+1));
     }
-
 
     async function render(now) {
         now *= 0.001;  // convert to seconds
