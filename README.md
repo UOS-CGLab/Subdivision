@@ -11,10 +11,30 @@
 
 ## Preprocesser
 ### create json data
+In topology.json, data of each object is stored in the following structure:
+```json
+{
+    "data":{
+        "e_data" : [...],
+        "e_indices" : [...],
+        "f_data" : [...],
+        "f_indices" : [...],
+        "f_offsets" : [...],
+        "f_valances" : [...],
+        "v_data" : [...],
+        "v_index" : [...],
+        "v_indices" : [...],
+        "v_offsets" : [...],
+        "v_valances" : [...]
+    },
+    "depth" : n
+}
+```
 
 ### create buffers and pipelines
 
 ### create bindgroups
+
 
 
 ## Render
@@ -30,7 +50,127 @@ Our rendering process is divided into 4 main steps:
 
 ### Subdivision
 
-The subdivision process is same with ....
+To perform Catmull-Clark subdivision based on topology.json, we use a compute shader to calculate the position of each point. At each step of the subdivision, new vertices are generated for each face, edge and vertex. This process is executed in parallel using WebGPU's compute shader.
+
+Following is wgsl codes of each compute shader module in function createPipelines() in pipelines.js.
+``` javascript
+    const module_Face = device.createShaderModule({
+        code: `
+        @group(0) @binding(0) var<storage, read> vertex_F: array<i32>;
+        @group(0) @binding(1) var<storage, read> offset_F: array<i32>;
+        @group(0) @binding(2) var<storage, read> valance_F: array<i32>;
+        @group(0) @binding(3) var<storage, read> pointIdx_F: array<i32>;
+        @group(0) @binding(4) var<storage, read_write> baseVertex: array<f32>;
+
+
+        @compute @workgroup_size(256)
+        fn compute_FacePoint(@builtin(global_invocation_id) global_invocation_id: vec3<u32>){
+            let id = global_invocation_id.x;
+            let start = u32(vertex_F[0]*4);
+
+            let index = vertex_F[id];
+            let offset = offset_F[id];
+            let valance = valance_F[id];
+
+            var pos = vec3(0.0,0.0,0.0);
+
+            for (var i=offset; i<offset+valance ; i++ ){
+            pos.x = pos.x + ( baseVertex[pointIdx_F[i]*4]) / f32(valance);
+            pos.y = pos.y + ( baseVertex[(pointIdx_F[i]*4)+1] / f32(valance));
+            pos.z = pos.z + ( baseVertex[(pointIdx_F[i]*4)+2] / f32(valance));
+            }
+
+            baseVertex[start+id*4] = pos.x;
+            baseVertex[start+id*4+1] = pos.y;
+            baseVertex[start+id*4+2] = pos.z;
+            baseVertex[start+id*4+3] = 0;
+        }
+        `
+    });
+
+    const module_Edge = device.createShaderModule({
+        code: `
+        @group(0) @binding(0) var<storage, read> vertex_E: array<i32>;
+        @group(0) @binding(1) var<storage, read> pointIdx_E: array<i32>;
+        @group(0) @binding(2) var<storage, read_write> baseVertex: array<f32>;
+
+        @compute @workgroup_size(256)
+        fn compute_EdgePoint(@builtin(global_invocation_id) global_invocation_id: vec3<u32>){
+            let id = global_invocation_id.x;
+            let start2 = u32(vertex_E[0]*4);
+
+            let index = vertex_E[id];
+            let offset = 4*id;
+
+            var pos = vec3(0.0,0.0,0.0);
+
+            for (var i=offset; i<offset+4 ; i++ ){
+            pos.x = pos.x + ( baseVertex[pointIdx_E[i]*4]) / 4;
+            pos.y = pos.y + ( baseVertex[(pointIdx_E[i]*4)+1] ) / 4;
+            pos.z = pos.z + ( baseVertex[(pointIdx_E[i]*4)+2] ) / 4;
+            }
+
+            baseVertex[start2+id*4] = pos.x;
+            baseVertex[start2+id*4+1] = pos.y;
+            baseVertex[start2+id*4+2] =pos.z;
+            baseVertex[start2+id*4+3] = 0;
+        }
+        `
+    });
+
+    const module_Vertex = device.createShaderModule({
+        code: `
+        @group(0) @binding(0) var<storage, read> vertex_V: array<i32>;
+        @group(0) @binding(1) var<storage, read> offset_V: array<i32>;
+        @group(0) @binding(2) var<storage, read> valance_V: array<i32>;
+        @group(0) @binding(3) var<storage, read> index_V: array<i32>;
+        @group(0) @binding(4) var<storage, read> pointIdx_V: array<i32>;
+        @group(0) @binding(5) var<storage, read_write> baseVertex: array<f32>;
+
+
+        @compute @workgroup_size(256)
+        fn compute_VertexPoint(@builtin(global_invocation_id) global_invocation_id: vec3<u32>){
+            let id = global_invocation_id.x;
+            let start = u32(vertex_V[0]*4);
+
+            let index = vertex_V[id];
+            let oldIndex = index_V[id];
+            let offset = offset_V[id];
+            let valance = valance_V[id]/2;
+
+            var pos = vec3(0.0,0.0,0.0);
+
+            for (var i=offset; i<offset+(valance*2) ; i++ ){
+            pos.x = pos.x + ( baseVertex[pointIdx_V[i]*4]) / (f32(valance)*f32(valance));
+            pos.y = pos.y + ( baseVertex[(pointIdx_V[i]*4)+1] ) / (f32(valance)*f32(valance));
+            pos.z = pos.z + ( baseVertex[(pointIdx_V[i]*4)+2] ) / (f32(valance)*f32(valance));
+            }
+
+            baseVertex[start+id*4] = (pos.x + (baseVertex[oldIndex*4] * (f32(valance-2)/f32(valance))));
+            baseVertex[start+id*4+1] = pos.y + (baseVertex[oldIndex*4+1] * (f32(valance-2)/f32(valance)));
+            baseVertex[start+id*4+2] = pos.z + (baseVertex[oldIndex*4+2] * (f32(valance-2)/f32(valance)));
+            baseVertex[start+id*4+3] = 0;
+        }
+        `
+    });
+```
+
+```javascript
+function make_compute_encoder(device, pipeline, bindgroup, workgroupsize, text = " ") {
+    const encoder = device.createCommandEncoder({label: text});
+    const pass = encoder.beginComputePass({label: text});
+    pass.setPipeline(pipeline);
+    pass.setBindGroup(0, bindgroup);
+    pass.dispatchWorkgroups(workgroupsize);
+    pass.end();
+    const commandBuffer = encoder.finish();
+    device.queue.submit([commandBuffer]);
+}
+```
+
+
+
+
 
 ### Limit points
 
