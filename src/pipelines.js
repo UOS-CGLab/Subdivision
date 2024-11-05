@@ -389,7 +389,7 @@ export async function createPipelines(device, presentationFormat) {
             var textureValue    =    vert.position.x *patchImageLowX1
                                 + (1-vert.position.x)*patchImageHighX1;
 
-            if(vert.position.x == 0 && vert.position.y == 0)
+            if(vert.position.x == 0.0 && vert.position.y == 0.0) // changed
             {
                 textureValue = Sum_of_4value(
                     textureLoad(object_texture, vec2i(vec2f(
@@ -412,7 +412,7 @@ export async function createPipelines(device, presentationFormat) {
                 }
             }
 
-            else if(vert.position.x == 0 && vert.position.y == 1)
+            else if(vert.position.x == 0.0 && vert.position.y == 1.0) // changed
             {
                 textureValue = Sum_of_4value(
                     textureLoad(object_texture, vec2i(vec2f(
@@ -435,7 +435,7 @@ export async function createPipelines(device, presentationFormat) {
                 }
             }
 
-            else if(vert.position.x == 1 && vert.position.y == 0)
+            else if(vert.position.x == 1.0 && vert.position.y == 0.0) // changed
             {
                 textureValue = Sum_of_4value(
                     textureLoad(object_texture, vec2i(vec2f(
@@ -458,7 +458,7 @@ export async function createPipelines(device, presentationFormat) {
                 }
             }
 
-            else if(vert.position.x == 1 && vert.position.y == 1)
+            else if(vert.position.x == 1.0 && vert.position.y == 1.0) // changed
             {
                 textureValue = Sum_of_4value(
                     textureLoad(object_texture, vec2i(vec2f(
@@ -481,7 +481,7 @@ export async function createPipelines(device, presentationFormat) {
                 }
             }
     
-            else if(vert.position.y == 0)
+            else if(vert.position.y == 0.0) // changed
             {
                 textureValue = Sum_of_2value(
                     textureLoad(object_texture, vec2i(vec2f(
@@ -494,7 +494,7 @@ export async function createPipelines(device, presentationFormat) {
                     )), 0).x
                 );
             }
-            else if(vert.position.y == 1)
+            else if(vert.position.y == 1.0) // changed
             {
                 textureValue = Sum_of_2value(
                     textureLoad(object_texture, vec2i(vec2f(
@@ -507,7 +507,7 @@ export async function createPipelines(device, presentationFormat) {
                     )), 0).x
                 );
             }
-            else if(vert.position.x == 0)
+            else if(vert.position.x == 0.0) // changed
             {
                 textureValue = Sum_of_2value(
                     textureLoad(object_texture, vec2i(vec2f(
@@ -520,7 +520,7 @@ export async function createPipelines(device, presentationFormat) {
                     )), 0).x
                 );
             }
-            else if(vert.position.x == 1)
+            else if(vert.position.x == 1.0) // changed
             {
                 textureValue = Sum_of_2value(
                     textureLoad(object_texture, vec2i(vec2f(
