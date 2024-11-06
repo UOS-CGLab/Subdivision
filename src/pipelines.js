@@ -185,9 +185,10 @@ export async function createPipelines(device, presentationFormat) {
         code: /*wgsl*/ `
         struct Uniforms {
             matrix: mat4x4f,
-            view: vec3f,
-            time: f32,
-            wireAdjust: f32,
+            view: vec4f,
+            time: vec4f,
+            wireAdjust: vec4f,
+            displacementValue: vec4f,
         };
 
         struct tex {
@@ -332,36 +333,6 @@ export async function createPipelines(device, presentationFormat) {
             _ = object_texture;
             _ = base_normal[0];
 
-            // let patchImageHighX = vec2f(   vert.position.y *base_UV[  instanceIndex*4+1  ])
-            //                     + vec2f((1-vert.position.y)*base_UV[  instanceIndex*4+0  ]);
-            // let patchImageLowX  = vec2f(   vert.position.y *base_UV[  instanceIndex*4+3 ])
-            //                     + vec2f((1-vert.position.y)*base_UV[  instanceIndex*4+2  ]);
-
-            // let uv              = vec2f(   vert.position.x *patchImageLowX)
-            //                     + vec2f((1-vert.position.x)*patchImageHighX);
-
-            let texture5_0  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 0].x*512, (1-base_UV[instanceIndex*16 + 0].y)*512)), 0);
-            let texture5_1  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 1].x*512, (1-base_UV[instanceIndex*16 + 1].y)*512)), 0);
-            let texture5_2  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 2].x*512, (1-base_UV[instanceIndex*16 + 2].y)*512)), 0);
-            let texture5_3  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 3].x*512, (1-base_UV[instanceIndex*16 + 3].y)*512)), 0);
-            let texture6_0  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 4].x*512, (1-base_UV[instanceIndex*16 + 4].y)*512)), 0);
-            let texture6_1  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 5].x*512, (1-base_UV[instanceIndex*16 + 5].y)*512)), 0);
-            let texture6_2  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 6].x*512, (1-base_UV[instanceIndex*16 + 6].y)*512)), 0);
-            let texture6_3  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 7].x*512, (1-base_UV[instanceIndex*16 + 7].y)*512)), 0);
-            let texture9_0  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 8].x*512, (1-base_UV[instanceIndex*16 + 8].y)*512)), 0);
-            let texture9_1  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 + 9].x*512, (1-base_UV[instanceIndex*16 + 9].y)*512)), 0);
-            let texture9_2  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 +10].x*512, (1-base_UV[instanceIndex*16 +10].y)*512)), 0);
-            let texture9_3  = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 +11].x*512, (1-base_UV[instanceIndex*16 +11].y)*512)), 0);
-            let texture10_0 = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 +12].x*512, (1-base_UV[instanceIndex*16 +12].y)*512)), 0);
-            let texture10_1 = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 +13].x*512, (1-base_UV[instanceIndex*16 +13].y)*512)), 0);
-            let texture10_2 = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 +14].x*512, (1-base_UV[instanceIndex*16 +14].y)*512)), 0);
-            let texture10_3 = textureLoad(object_texture, vec2i(vec2f(base_UV[instanceIndex*16 +15].x*512, (1-base_UV[instanceIndex*16 +15].y)*512)), 0);
-    
-            let textureBuffer5  = max(max(texture5_0.x  , texture5_1.x)  , max(texture5_2.x  , texture5_3.x) );
-            let textureBuffer6  = max(max(texture6_0.x  , texture6_1.x)  , max(texture6_2.x  , texture6_3.x) );
-            let textureBuffer9  = max(max(texture9_0.x  , texture9_1.x)  , max(texture9_2.x  , texture9_3.x) );
-            let textureBuffer10 = max(max(texture10_0.x , texture10_1.x) , max(texture10_2.x , texture10_3.x));
-
 
             let patchImageHighX = vec2f(   vert.position.y *base_UV[  instanceIndex*16+4  ])
                                 + vec2f((1-vert.position.y)*base_UV[  instanceIndex*16+0  ]);
@@ -373,21 +344,7 @@ export async function createPipelines(device, presentationFormat) {
             
             let texCoordInt = vec2i(  i32(uv.x*512.0),  i32((1-uv.y)*512.0)  );
 
-            // let patchImageHighX1 =    vert.position.y *textureBuffer[  conn[ instanceIndex*16+5]  ]
-            //                      + (1-vert.position.y)*textureBuffer[  conn[ instanceIndex*16+6]  ];
-            // let patchImageLowX1  =    vert.position.y *textureBuffer[  conn[ instanceIndex*16+9]  ]
-            //                      + (1-vert.position.y)*textureBuffer[  conn[ instanceIndex*16+10]  ];
-
-            // let textureValue    =    vert.position.x *patchImageLowX1
-            //                     + (1-vert.position.x)*patchImageHighX1;
-
-            let patchImageHighX1 =    vert.position.y *textureBuffer6
-                                 + (1-vert.position.y)*textureBuffer5;
-            let patchImageLowX1  =    vert.position.y *textureBuffer10
-                                 + (1-vert.position.y)*textureBuffer9;
-
-            var textureValue    =    vert.position.x *patchImageLowX1
-                                + (1-vert.position.x)*patchImageHighX1;
+            var textureValue: f32;
 
             if(vert.position.x == 0.0 && vert.position.y == 0.0) // changed
             {
@@ -540,12 +497,6 @@ export async function createPipelines(device, presentationFormat) {
             }
 
             // let textureValue = f32(round(80*(pow(20, textureLoad(object_texture, texCoordInt, 0).x - 0.5)/4.5)))/80.0; // textureLoad 뽑아내면 될듯
-            // let textureValue = f32(round(80*(pow(  20, textureLoad(object_texture, texCoordInt, 0).x )) /20 ))/80.0;
-            // let textureValue = f32(round(80*(pow(  textureLoad(object_texture, texCoordInt, 0).x, 10) )))/80.0;
-            // let textureValue = f32(round(5*textureLoad(object_texture, texCoordInt, 0).x))/5.0;
-            // let textureValue = textureLoad(object_texture, texCoordInt, 0).x;
-            // let textureValue = (vert.position.x *textureImageLowX) + ((1-vert.position.x)*textureImageHighX);
-            // let textureValue = (textureValue0 + textureValue1 + textureValue2 + textureValue3) / 4;
 
             // vsOut.position = uni.matrix * vec4f(p*5, 1);
             if(textureValue-0.5 < 0)
@@ -554,12 +505,14 @@ export async function createPipelines(device, presentationFormat) {
             }
             else
             {
-                vsOut.position = uni.matrix * vec4f(p*5 + normal*(textureValue-0.5)*30, 1);
+                vsOut.position = uni.matrix * vec4f(p*5 + normal*(textureValue-0.5)*uni.displacementValue.x, 1);
+                // vsOut.position = uni.matrix * vec4f(p*5 + normal*20, 1);
+                // vsOut.position = uni.matrix * vec4f(p*5 + textureValue*20, 1);
             }
             // vsOut.position = uni.matrix * vec4f(p*5 + textureValue*20, 1);
             // vsOut.position = uni.matrix * vec4f(p*5 + normal*2, 1);
 
-            // vsOut.position = uni.matrix * vec4f(p*5 + normal*textureValue*5, 1);
+            // vsOut.position = uni.matrix * vec4f(p*5 + normal*(textureValue-0.5)*30, 1);
 
             vsOut.center = vec3f(vert.position.xy, 0);
             vsOut.texcoord = vec2f(uv.x, 1-uv.y);
@@ -570,7 +523,7 @@ export async function createPipelines(device, presentationFormat) {
             let g1 = pos2[  conn[instanceIndex*16+ 6]  ].xyz;
             let g2 = pos2[  conn[instanceIndex*16+ 9]  ].xyz;
             let g3 = pos2[  conn[instanceIndex*16+10]  ].xyz;
-            let view = normalize(  -1*uni.view - p  );
+            let view = normalize(  -1*uni.view.xyz - p  );
             vsOut.color = color.value;
             vsOut.color += color.value * vec4f(dot(view, normal)*0.5, dot(view, normal)*0.5, dot(view, normal)*0.5, 1)  ;
             if(dot(view, normal) > 0)
@@ -578,8 +531,8 @@ export async function createPipelines(device, presentationFormat) {
                 vsOut.color += vec4f((pow(dot(view, normal), 100)*0.2), (pow(dot(view, normal), 100)*0.2), (pow(dot(view, normal), 100)*0.2), 1);
             }
 
-            var wire = uni.wireAdjust;
-            if(uni.wireAdjust == 1)
+            var wire = uni.wireAdjust.x;
+            if(uni.wireAdjust.x == 1)
             {
                 vsOut.color = vec4f(0, 0, 0, 0);
                 wire = 1;
@@ -594,10 +547,10 @@ export async function createPipelines(device, presentationFormat) {
             // {
             //     discard;
             // }
-            // if(abs(vsOut.center.x - 0.5) > (0.5-vsOut.adjust) || abs(vsOut.center.y - 0.5) > (0.5-vsOut.adjust)) // 0.49 vsOut.adjust
-            // {
-            //     return vec4f(0, 0, 0, 1);
-            // }
+            if(abs(vsOut.center.x - 0.5) > (0.5-vsOut.adjust) || abs(vsOut.center.y - 0.5) > (0.5-vsOut.adjust)) // 0.49 vsOut.adjust
+            {
+                return vec4f(1, 0, 0, 1);
+            }
             // return vec4f(vsOut.color);
             // return vec4f(temp.xyz*5 - 2.5, 1);
             return vec4f(vsOut.texcoord1.x*5 -2.5, vsOut.texcoord1.x*5 -2.5, vsOut.texcoord1.x*5 -2.5, 1);
@@ -615,9 +568,10 @@ export async function createPipelines(device, presentationFormat) {
         code: /*wgsl*/ `
         struct Uniforms {
             matrix: mat4x4f,
-            view: vec3f,
-            time: f32,
-            wireAdjust: f32,
+            view: vec4f,
+            time: vec4f,
+            wireAdjust: vec4f,
+            displacementValue: vec4f,
         };
 
         struct Vertex {
@@ -682,7 +636,9 @@ export async function createPipelines(device, presentationFormat) {
             }
             else
             {
-                vsOut.position = uni.matrix * vec4f(p*5 - normal*(textureValue-0.5)*30, 1);
+                vsOut.position = uni.matrix * vec4f(p*5 - normal*(textureValue-0.5)*uni.displacementValue.x, 1);
+                // vsOut.position = uni.matrix * vec4f(p*5 - normal*20, 1);
+                // vsOut.position = uni.matrix * vec4f(p*5 + textureValue*20, 1);
             }
 
             // vsOut.position = uni.matrix * vec4f(p*5 - normal*2, 1);

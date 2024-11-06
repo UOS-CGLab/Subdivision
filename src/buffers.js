@@ -237,7 +237,7 @@ function create_texture_buffers(device, depth)
 
 export function uniform_buffers(device)
 {
-    const uniformBufferSize = (28) * 4;
+    const uniformBufferSize = (32) * 4;
     let uniformBuffer = device.createBuffer({
         label: 'uniforms',
         size: uniformBufferSize,
@@ -250,18 +250,20 @@ export function uniform_buffers(device)
     const viewOffset = 16;
     const timeOffset = 20;
     const wireOffset = 24;
+    const displacementOffset = 28;
 
     const matrixValue = uniformValues.subarray(kMatrixOffset, kMatrixOffset + 16);
     const viewValue = uniformValues.subarray(viewOffset, viewOffset + 4);
     const timeValue = uniformValues.subarray(timeOffset, timeOffset + 4);
-    const wrieValue = uniformValues.subarray(wireOffset, timeOffset + 4);
+    const wireValue = uniformValues.subarray(wireOffset, wireOffset + 4);
+    const displacementValue = uniformValues.subarray(displacementOffset, displacementOffset + 4);
 
     
 
 
 
 
-    return { uniformBuffer, uniformValues, matrixValue, viewValue, timeValue, wrieValue };
+    return { uniformBuffer, uniformValues, matrixValue, viewValue, timeValue, wireValue, displacementValue };
 }
 
 export async function buffers(device, depth, obj, limit, myString){

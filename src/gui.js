@@ -11,6 +11,7 @@ export class Settings {
             draw: [true, true, true, true, false, true, true, true],
             moveSpeed: 1,
             wireAdjust: 0.01,
+            displacementValue: 30,
             animation: false,
         };
     }
@@ -27,6 +28,7 @@ export class Settings {
         }
 
         gui.add(this.settings, 'wireAdjust', 0, 0.1).name('wireAdjust')// .onChange((name, value) => this.onSliderChange('wireAdjust', value));
+        gui.add(this.settings, 'displacementValue', 0, 100).name('displacementValue')// .onChange((name, value) => this.onSliderChange('displacementValue', value));
         gui.add(this.settings, 'moveSpeed', 0, 100).name('moveSpeed')// .onChange((name, value) => this.onSliderChange('moveSpeed', value));
         gui.add(this.settings, 'animation').name('animation')// .onChange((name, value) => this.onSliderChange('moveSpeed', value));
     }
@@ -59,6 +61,8 @@ export class Settings {
                 return this.settings.moveSpeed;
             case 'wireAdjust':
                 return this.settings.wireAdjust;
+            case 'displacementValue':
+                return this.settings.displacementValue;
             case 'animation':
                 return this.settings.animation;
             default:

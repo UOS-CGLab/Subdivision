@@ -29,7 +29,7 @@ async function main() {
     let narray = [1, 1, 1, 1, 1, 1, 1, 1];
     let pipelineValue = 1;
 
-    let { uniformBuffer, uniformValues, matrixValue, viewValue, timeValue, wrieValue} = uniform_buffers(device);
+    let { uniformBuffer, uniformValues, matrixValue, viewValue, timeValue, wireValue, displacementValue } = uniform_buffers(device);
 
     let { 
         levels,
@@ -169,7 +169,10 @@ async function main() {
         keyValue = settings.getProterty('moveSpeed');
         viewValue[0] = 0; viewValue[1] = 0; viewValue[2] = -50; viewValue[3] = 1;
         timeValue[0] = now;
-        wrieValue[0] = settings.getProterty('wireAdjust');
+        wireValue[0] = settings.getProterty('wireAdjust');
+        displacementValue[0] = settings.getProterty('displacementValue');
+
+        console.log(uniformValues);
 
         // upload the uniform values to the uniform buffer
         device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
@@ -232,6 +235,7 @@ async function main() {
             if(settings.getProterty('draw')[i] == true) {
                 let j = i;
                 if (i > 4); j = 4;
+                // pass.drawIndexed(narray[i] * narray[i] * 6,  4);
                 pass.drawIndexed(narray[i] * narray[i] * 6,  j * 2 * 1000 + 100000);
             }
         }
