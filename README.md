@@ -226,7 +226,7 @@ For example if max depth is 5, and the subdivision level of patch is 3, patch wi
 각각의 patch는 서로 다른 좌표에 draw되어야한다. 해당 데이터는 patch.txt에 저장되어 있고 storagebuffer로 사용한다.
 patch의 vertex position들은 cubic b-spline으로 연산된다.
 
-<img src="./imgs/patch1_1.png" alt="Description" width="300"><img src="./imgs/patch4_1.png" alt="Description" width="300"><img src="./imgs/patch4_64.png" alt="Description" width="300">
+<img src="./imgs/patch4_1.png" alt="Description" width="300"><img src="./imgs/patch4_64.png" alt="Description" width="300">
 
 ```javascript
     const module1 = device.createShaderModule({
