@@ -10,7 +10,7 @@
 ## Setup
 
 ## Preprocesser
-### create json data
+### json data
 In topology.json, data of each object is stored in the following structure:
 ```json
 {
@@ -31,10 +31,58 @@ In topology.json, data of each object is stored in the following structure:
 }
 ```
 
-### create buffers and pipelines
+### Buffers
+사용되는 buffer는 다음과 같다
 
-### create bindgroups
+- vertex_Buffer_F
+- offset_Buffer_F
+- valance_Buffer_F
+- pointIdx_Buffer_F
+- vertex_Buffer_E
+- pointIdx_Buffer_E
+- vertex_Buffer_V
+- offset_Buffer_V
+- valance_Buffer_V
+- index_Buffer_V
+- pointIdx_Buffer_V
+- levels
+- connectivityStorageBuffers
+- base_UVStorageBuffers
+- extra_base_UVStorageBuffers
+- extra_vertex_offsetStorageBuffers
+- textureBuffer
+- indices
+- texcoordDatas
+- indexBuffers : B-spline patch를 그릴 때 vertex들의 그리는 순서를 저장한다
+- vertexBuffers : 
+- Base_Vertex_Buffer
+- Base_Normal_Buffer
+- OrdinaryPointData
+- texture
+- sampler
+- limit_Buffers
+- Base_Vertex_After_Buffer
+- OrdinaryBuffer
 
+### Pipelines
+
+- pipeline_Face : compute pipeline
+- pipeline_Edge : compute pipeline
+- pipeline_Vertex : compute pipeline
+- pipelines : rendering pipeline
+- pipeline2
+- pipelineAnime 
+- pipeline_Limit
+
+### Bindgroups
+
+- bindGroup_Edge
+- bindGroup_Vertex
+- fixedBindGroups
+- animeBindGroup
+- changedBindGroups
+- OrdinaryPointfixedBindGroup
+- bindGroup_Limit
 
 
 ## Render
@@ -154,6 +202,7 @@ Following is wgsl codes of each compute shader module in function createPipeline
         `
     });
 ```
+각각의 compute shader는 patch를 draw 하기 전에 make_compute_encoder()을 통해 활성화되어, 현재 depth만큼 subdivision을 수행해 새로운 vertex들의 position을 계산하고 Base_Vertex_Buffer에 저장한다.
 
 ```javascript
 function make_compute_encoder(device, pipeline, bindgroup, workgroupsize, text = " ") {
@@ -219,7 +268,24 @@ For example if max depth is 5, and the subdivision level of patch is 3, patch wi
 
 <img src="./imgs/tesselation.png" alt="Description" width="300">
 
-위의 테셀레이션을 위해 만들어진 데이터를 setvertexbuffer, setindexbuffer로 지정한다. 그 후 drawIndexed(m, n)을 호출하면 n개의 instance(=patch)를 각각 m개의 vertex로 draw한다. 이때 m개의 vertex는 vertexBuffer에 정의되어있고, draw 순서는 indexBuffer에 정의된다.
+위에서 만들어진 데이터는 각각 해당하는 depth의 vertexBuffers와 indexBuffers에 저장된다. 그 후 drawIndexed(m, n)가 호출되어 n개의 patch를 m개의 vertex로 draw한다. 
+
+
+``` javascript
+        pass.setPipeline(pipelines[pipelineValue]);
+        pass.setBindGroup(0, fixedBindGroups[pipelineValue]);
+        for (let i = 0; i <= depth; i++) { // draw -> settings.getProterty('ordinaryLevel')
+            pass.setBindGroup(1, changedBindGroups[i+(depth+1)*pipelineValue]);
+            pass.setVertexBuffer(0, vertexBuffers[N][i]);
+            pass.setIndexBuffer(indexBuffers[N][i], 'uint32');
+            if(settings.getProterty('draw')[i] == true) {
+                let j = i;
+                if (i > 4); j = 4;
+                // pass.drawIndexed(narray[i] * narray[i] * 6,  4);
+                pass.drawIndexed(narray[i] * narray[i] * 6,  j * 2 * 1000 + 100000);
+            }
+        }
+```
 
 <img src="./imgs/patch1_1.png" alt="Description" width="300"><img src="./imgs/patch1_16.png" alt="Description" width="300">
 
@@ -329,14 +395,16 @@ patch의 vertex position들은 cubic b-spline으로 연산된다.
 ### How to use texture and apply displacement mapping?
 
 displacement mapping은 vertex의 position을 보다 사실적인 위치로 옮기는데 의미가 있다.
-즉, texture를 적용하는 시점은 vertex shader다.
-webgpu에서 vertex shader의 texture값을 가져오기 위해서는 textureLoad를 사용해야 한다.
-fragment shader에서 사용 가능한 textureSample은 vertex 사이의 fragment에서 모두 적용하는 것과는 다르게, 
-textureLoad는 해당 vertex에서만 texture가 적용된다.
+즉, vetex shader에서 texture 값을 적용시켜야 한다. 이 texture 값은 WebGPU의 textureLoad함수 또는 textureSample함수를 이용해 알아낼 수 있다.
+* textureLoad : 해당 vertex에서만 texture가 적용된다
+* textureSample : fragment shader에서만 사용 가능하며, vertex 사이의 fragment에서 모두 적용된다
+
+displacement mapping은 texture의 값이 vertex의 position에 직접적인 영향을 미치기 때문에, vetex의 position 변경을 위하여 본 프로젝트에서는 vertex shader에서 사용할 수 있는 textureLoad를 사용했다.
+
 webgpu에서의 displacement mapping을 하기 위해서는 subdivision, tesselation 등으로 vertex를 촘촘하게 만들어야 texture 잘 적용된다.
 
-patch에서 displacement mapping을 하기 위해서는 patch를 구성하는 16개의 점들 중, 안쪽의 4개 점들의 texture uv값을 알아야 한다.
-이 값은 patch.txt에서 각 패치에 해당하는 vertex의 uv값을 가져오고 있다.
+### case 1: regular B-spline patch의 경우
+regular B-spline patch에서 displacement mapping을 하기 위해서는 patch를 구성하는 16개의 점들 중, 안쪽의 4개 점들의 texture uv값을 이용한다. 이 값은 사전에 미리 처리되어 patch.txt에 저장되어 있어, 각 패치에 해당하는 vertex의 uv값을 가져올 수 있다.
 이때 주의할 점은 같은 vertex여도 서로 다른 uv값이 존재할 수 있다.
 따라서 patch의 안쪽 uv값만을 가져와야 한다.
 
