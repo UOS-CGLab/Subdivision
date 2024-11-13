@@ -468,4 +468,63 @@ regular B-spline patch에서 displacement mapping을 하기 위해서는 patch�
 
 <img src="./imgs/crack.png" alt="Description" width="300">
 
+다만 이렇게 하더라도 크랙은 생긴다. </br>
+그 이유는 하나의 vertex가 서로 다른 uv값이 존재할 수 있는데, </br>
+서로 맞닿는 패치 경계에서 다른 uv값으로 texture에 접근하고 있으며 textureLoad로 나온 값이 미세하게 차이가 있을 수 있기 때문이다. </br>
+
+이를 보완하기 위해서 patch에서 정보를 가져올 때 4개의 vertex에 대해 uv를 안쪽만이 아닌 전부 가져온다.
+
+```txt
+578, 4, 5, 229, 639, 0, 3, 552, 641, 1, 2, 251, 643, 237, 238, 252, 0.250183, 0.595245, 0.250183, 0.595245, 0.250183, 0.595245, 0.250183, 0.595245, 0.314301, 0.576019, 0.314301, 0.576019, 0.314301, 0.576019, 0.314301, 0.576019, 0.250183, 0.560913, 0.250183, 0.560913, 0.250183, 0.560913, 0.250183, 0.560913, 0.322311, 0.543549, 0.322311, 0.543549, 0.322311, 0.543549, 0.322311, 0.543549, 
+40, 22, 23, 25, 36, 12, 15, 20, 37, 13, 14, 19, 38, 16, 17, 18, 0.121277, 0.747192, 0.121277, 0.747192, 0.121277, 0.747192, 0.121277, 0.747192, 0.119461, 0.718857, 0.119461, 0.718857, 0.119461, 0.718857, 0.119461, 0.718857, 0.101593, 0.757721, 0.101593, 0.757721, 0.101593, 0.757721, 0.101593, 0.757721, 0.098282, 0.730087, 0.098282, 0.730087, 0.098282, 0.730087, 0.098282, 0.730087, 
+...
+```
+
+이렇게 가져온 uv를 경계에서 통일 시켜줘야하며, 
+tesselation 적용 후의 vertex를 각각의 case에 나누어서 작업하였다.
+
+1. patch의 꼭짓점에 있는 vertex(patch 4개에 포함된 vertex)
+
+```javascript
+        if(vert.position.x == 0.0 && vert.position.y == 0.0)
+            {
+                textureValue = Sum_of_4value(
+                    textureLoad(object_texture, vec2i(vec2f(
+                        base_UV[instanceIndex*16 + 0].x*512, (1-base_UV[instanceIndex*16 + 0].y)*512
+                    )), 0).x,
+                    textureLoad(object_texture, vec2i(vec2f(
+                        base_UV[instanceIndex*16 + 1].x*512, (1-base_UV[instanceIndex*16 + 1].y)*512
+                    )), 0).x,
+                    textureLoad(object_texture, vec2i(vec2f(
+                        base_UV[instanceIndex*16 + 2].x*512, (1-base_UV[instanceIndex*16 + 2].y)*512
+                    )), 0).x,
+                    textureLoad(object_texture, vec2i(vec2f(
+                        base_UV[instanceIndex*16 + 3].x*512, (1-base_UV[instanceIndex*16 + 3].y)*512
+                    )), 0).x,
+                );
+            }
+```
+
+2. patch의 선에 포함된 vertex(patch 4개에 포함된 vertex)
+
+```javascript
+        if(vert.position.x == 0.0 && vert.position.y == 0.0)
+            {
+                textureValue = Sum_of_4value(
+                    textureLoad(object_texture, vec2i(vec2f(
+                        base_UV[instanceIndex*16 + 0].x*512, (1-base_UV[instanceIndex*16 + 0].y)*512
+                    )), 0).x,
+                    textureLoad(object_texture, vec2i(vec2f(
+                        base_UV[instanceIndex*16 + 1].x*512, (1-base_UV[instanceIndex*16 + 1].y)*512
+                    )), 0).x,
+                    textureLoad(object_texture, vec2i(vec2f(
+                        base_UV[instanceIndex*16 + 2].x*512, (1-base_UV[instanceIndex*16 + 2].y)*512
+                    )), 0).x,
+                    textureLoad(object_texture, vec2i(vec2f(
+                        base_UV[instanceIndex*16 + 3].x*512, (1-base_UV[instanceIndex*16 + 3].y)*512
+                    )), 0).x,
+                );
+            }
+```
+
 ### 
