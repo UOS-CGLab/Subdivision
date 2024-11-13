@@ -34,18 +34,20 @@ In topology.json, data of each object is stored in the following structure:
 ### Buffers
 사용되는 buffer는 다음과 같다
 
-- vertex_Buffer_F
-- offset_Buffer_F
-- valance_Buffer_F
-- pointIdx_Buffer_F
-- vertex_Buffer_E
-- pointIdx_Buffer_E
-- vertex_Buffer_V
-- offset_Buffer_V
-- valance_Buffer_V
-- index_Buffer_V
-- pointIdx_Buffer_V
-- levels
+#### buffers.js.의 createBufferData()로 생성되는 buffer
+- vertex_Buffer_F : subdivition시 새로 생성되는 face point index
+- offset_Buffer_F : subdivitions시 face point를 계산하는 데 사용할 vertex들의 시작 위치
+- valance_Buffer_F : subdivitions시 face point를 계산하는 데 사용되는 vertex들의 개수
+- pointIdx_Buffer_F : subdivition시 face point를 계산하는 데 사용되는 vetex들의 index
+- vertex_Buffer_E : subdivition시 새로 생성되는 Edge point의 index
+- pointIdx_Buffer_E : subdivition시 edge point를 계산하는 데 사용되는 vetex들의 index
+- vertex_Buffer_V : subdivition시 새로 생성되는 vertex point의 index
+- offset_Buffer_V : subdivitions시 vertex point를 계산하는 데 사용할 vertex들의 시작 위치
+- valance_Buffer_V : subdivitions시 vertex point를 계산하는 데 사용되는 vertex들의 개수
+- index_Buffer_V : subdivision으로 인해 위치가 이동되는 기존의 vertex의 index
+- pointIdx_Buffer_V : subdivition시 vertex point를 계산하는 데 사용되는 vetex들의 index
+
+#### buffers.js의  buffers() 함수로 생성되는 buffer
 - connectivityStorageBuffers
 - base_UVStorageBuffers
 - extra_base_UVStorageBuffers
@@ -53,36 +55,25 @@ In topology.json, data of each object is stored in the following structure:
 - textureBuffer
 - indices
 - texcoordDatas
-- indexBuffers : B-spline patch를 그릴 때 vertex들의 그리는 순서를 저장한다
+- indexBuffers : B-spline patch를 그릴 때 vertex들의 그리는 순서
 - vertexBuffers : 
 - Base_Vertex_Buffer
 - Base_Normal_Buffer
 - OrdinaryPointData
 - texture
-- sampler
 - limit_Buffers
 - Base_Vertex_After_Buffer
 - OrdinaryBuffer
 
 ### Pipelines
 
-- pipeline_Face : compute pipeline
-- pipeline_Edge : compute pipeline
-- pipeline_Vertex : compute pipeline
-- pipelines : rendering pipeline
-- pipeline2
-- pipelineAnime 
-- pipeline_Limit
-
-### Bindgroups
-
-- bindGroup_Edge
-- bindGroup_Vertex
-- fixedBindGroups
-- animeBindGroup
-- changedBindGroups
-- OrdinaryPointfixedBindGroup
-- bindGroup_Limit
+- pipeline_Face : compute pipeline (bindgroup : bindGroup_Face)
+- pipeline_Edge : compute pipeline ( bindgroup : bindGroup_Edge)
+- pipeline_Vertex : compute pipeline ( bindgroup : bindGroup_Vertex)
+- pipelines : render pipeline ( bindgroup : fixedBindGroups??? changedBindGroups???)
+- pipeline2 : render pipeline (bindgroup : OrdinaryPointfixedBindGroup)
+- pipelineAnime : compute pipeline ( bindgroup : animeBindGroup )
+- pipeline_Limit : compute pipeline
 
 
 ## Render
@@ -90,13 +81,14 @@ In topology.json, data of each object is stored in the following structure:
 Our rendering process is divided into 4 main steps:
 
 1. [Subdivision](#subdivision)
-2. [Limit points](#limit-points)
 3. [Draw ordinary points](#draw-ordinary-points)
 4. [Draw limit points](#draw-limit-points)
 
 
 
 ### Subdivision
+
+#### ordinary points
 
 To perform Catmull-Clark subdivision based on topology.json, we use a compute shader to calculate the position of each point. At each step of the subdivision, new vertices are generated for each face, edge and vertex. This process is executed in parallel using WebGPU's compute shader.
 
@@ -216,12 +208,59 @@ function make_compute_encoder(device, pipeline, bindgroup, workgroupsize, text =
     device.queue.submit([commandBuffer]);
 }
 ```
+이후에 ordinary points는 B-spline patch를 이용해 렌더링된다.
+
+#### Extra-ordinary points
+Ordinary points의 subdivition 된 후 위치를 계산한 후에, Extra-ordinary points의 position을 계산한다.
+각각의 Extra-ordinary points는 각각의 limits position을 계산한 후 그 위치로 이동된다.
+아래는 pipeline.js의 createPipelines() 함수 안에 정의된 limit position을 계산하는 compute shader의 wgsl 코드이다.
+
+``` javascript
+    const module_Limit = device.createShaderModule({
+        code: `
+        @group(0) @binding(0) var<storage, read_write> baseVertex: array<f32>;
+        @group(0) @binding(1) var<storage, read_write> limitData: array<i32>;
+        @group(0) @binding(2) var<storage, read_write> baseNormal: array<vec4f>;
 
 
+        @compute @workgroup_size(256)
+        fn compute_LimitPoint(@builtin(global_invocation_id) global_invocation_id: vec3<u32>){
+            let id = global_invocation_id.x;
+            let limitIdx= limitData[id*9];
+
+            var limPos = vec3(baseVertex[4*limitIdx], baseVertex[4*limitIdx+1], baseVertex[4*limitIdx+2]);
+
+            let e0 = vec3(baseVertex[4*limitData[id*9+1]],baseVertex[4*limitData[id*9+1]+1],baseVertex[4*limitData[id*9+1]+2]);
+            let e1 = vec3(baseVertex[4*limitData[id*9+3]],baseVertex[4*limitData[id*9+3]+1],baseVertex[4*limitData[id*9+3]+2]);
+            let e2 = vec3(baseVertex[4*limitData[id*9+5]],baseVertex[4*limitData[id*9+5]+1],baseVertex[4*limitData[id*9+5]+2]);
+            let e3 = vec3(baseVertex[4*limitData[id*9+7]],baseVertex[4*limitData[id*9+7]+1],baseVertex[4*limitData[id*9+7]+2]);
 
 
+            let f0 = vec3(baseVertex[4*limitData[id*9+2]],baseVertex[4*limitData[id*9+2]+1],baseVertex[4*limitData[id*9+2]+2]);
+            let f1 = vec3(baseVertex[4*limitData[id*9+4]],baseVertex[4*limitData[id*9+4]+1],baseVertex[4*limitData[id*9+4]+2]);
+            let f2 = vec3(baseVertex[4*limitData[id*9+6]],baseVertex[4*limitData[id*9+6]+1],baseVertex[4*limitData[id*9+6]+2]);
+            let f3 = vec3(baseVertex[4*limitData[id*9+8]],baseVertex[4*limitData[id*9+8]+1],baseVertex[4*limitData[id*9+8]+2]);
 
-### Limit points
+            let edge_sum = e0+e1+e2+e3;
+            let face_sum = f0+f1+f2+f3;
+
+            let c2 = 4*(e0-e2)+f0-f1-f2+f3;
+            let c3 = 4*(e1-e3)+f1-f2-f3+f0;
+            let normal = normalize(cross(c2,c3));
+
+            baseVertex[limitIdx*4] = ((16*limPos.x) + 4*edge_sum.x + (face_sum.x))/36;
+            baseVertex[limitIdx*4+1] = ((16*limPos.y) + 4*edge_sum.y + (face_sum.y))/36;
+            baseVertex[limitIdx*4+2] = ((16*limPos.z) + 4*edge_sum.z + (face_sum.z))/36;
+            baseVertex[limitIdx*4+3] = 0;
+
+            baseNormal[limitIdx] = vec4f(normal, 0);
+            baseNormal[0] = vec4f(0, 0, 0, 0);
+        }
+        `
+    });
+
+```
+
 
 
 
