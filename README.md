@@ -474,6 +474,8 @@ regular B-spline patch에서 displacement mapping을 하기 위해서는 patch�
 
 이를 보완하기 위해서 patch에서 정보를 가져올 때 4개의 vertex에 대해 uv를 안쪽만이 아닌 전부 가져온다.
 
+<img src="./imgs/patch_texture_uv_all.png" alt="Description" width="300">
+
 ```txt
 578, 4, 5, 229, 639, 0, 3, 552, 641, 1, 2, 251, 643, 237, 238, 252, 0.250183, 0.595245, 0.250183, 0.595245, 0.250183, 0.595245, 0.250183, 0.595245, 0.314301, 0.576019, 0.314301, 0.576019, 0.314301, 0.576019, 0.314301, 0.576019, 0.250183, 0.560913, 0.250183, 0.560913, 0.250183, 0.560913, 0.250183, 0.560913, 0.322311, 0.543549, 0.322311, 0.543549, 0.322311, 0.543549, 0.322311, 0.543549, 
 40, 22, 23, 25, 36, 12, 15, 20, 37, 13, 14, 19, 38, 16, 17, 18, 0.121277, 0.747192, 0.121277, 0.747192, 0.121277, 0.747192, 0.121277, 0.747192, 0.119461, 0.718857, 0.119461, 0.718857, 0.119461, 0.718857, 0.119461, 0.718857, 0.101593, 0.757721, 0.101593, 0.757721, 0.101593, 0.757721, 0.101593, 0.757721, 0.098282, 0.730087, 0.098282, 0.730087, 0.098282, 0.730087, 0.098282, 0.730087, 
@@ -485,27 +487,9 @@ tesselation 적용 후의 vertex를 각각의 case에 나누어서 작업하였�
 
 1. patch의 꼭짓점에 있는 vertex(patch 4개에 포함된 vertex)
 
-```javascript
-        if(vert.position.x == 0.0 && vert.position.y == 0.0)
-            {
-                textureValue = Sum_of_4value(
-                    textureLoad(object_texture, vec2i(vec2f(
-                        base_UV[instanceIndex*16 + 0].x*512, (1-base_UV[instanceIndex*16 + 0].y)*512
-                    )), 0).x,
-                    textureLoad(object_texture, vec2i(vec2f(
-                        base_UV[instanceIndex*16 + 1].x*512, (1-base_UV[instanceIndex*16 + 1].y)*512
-                    )), 0).x,
-                    textureLoad(object_texture, vec2i(vec2f(
-                        base_UV[instanceIndex*16 + 2].x*512, (1-base_UV[instanceIndex*16 + 2].y)*512
-                    )), 0).x,
-                    textureLoad(object_texture, vec2i(vec2f(
-                        base_UV[instanceIndex*16 + 3].x*512, (1-base_UV[instanceIndex*16 + 3].y)*512
-                    )), 0).x,
-                );
-            }
-```
+각 uv에서 textureLoad를 적용시킨 값을 뽑아내 4개의 값을 평균한다.
 
-2. patch의 선에 포함된 vertex(patch 4개에 포함된 vertex)
+<img src="./imgs/case1.png" alt="Description" width="300">
 
 ```javascript
         if(vert.position.x == 0.0 && vert.position.y == 0.0)
@@ -527,4 +511,40 @@ tesselation 적용 후의 vertex를 각각의 case에 나누어서 작업하였�
             }
 ```
 
-### 
+2. patch의 선에 포함된 vertex(patch 2개에 포함된 vertex)
+
+선의 끝과 끝인 두 vertex의 uv를 내분 시키고, 이를 평균한다.
+
+<img src="./imgs/case2.png" alt="Description" width="300">
+
+```javascript
+            else if(vert.position.y == 0.0)
+            {
+                textureValue = Sum_of_2value(
+                    textureLoad(object_texture, vec2i(vec2f(
+                        (   (1-vert.position.x) * base_UV[instanceIndex*16 +  0] + vert.position.x * base_UV[instanceIndex*16 +  8] ).x*512,
+                        (1-((1-vert.position.x) * base_UV[instanceIndex*16 +  0] + vert.position.x * base_UV[instanceIndex*16 +  8])).y*512
+                    )), 0).x,
+                    textureLoad(object_texture, vec2i(vec2f(
+                        (   (1-vert.position.x) * base_UV[instanceIndex*16 +  1] + vert.position.x * base_UV[instanceIndex*16 + 11] ).x*512,
+                        (1-((1-vert.position.x) * base_UV[instanceIndex*16 +  1] + vert.position.x * base_UV[instanceIndex*16 + 11])).y*512
+                    )), 0).x
+                );
+            }
+```
+
+3. patch 안에 포함된 vertex
+
+다른 patch와 맞닿지 않는 vertex이므로, uv값 그대로 textureLoad한다.
+
+```javascript
+            else
+            {
+                textureValue = textureLoad(object_texture, texCoordInt, 0).x;
+            }
+```
+
+### 여전히 남아있는 크랙
+
+<img src="./imgs/tessel2.png" alt="Description" width="300">
+<img src="./imgs/tessel3.png" alt="Description" width="300">
