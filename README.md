@@ -442,10 +442,8 @@ displacement mapping은 texture의 값이 vertex의 position에 직접적인 영
 
 webgpu에서의 displacement mapping을 하기 위해서는 subdivision, tesselation 등으로 vertex를 촘촘하게 만들어야 texture 잘 적용된다.
 
-### case 1: regular B-spline patch의 경우
+### regular B-spline patch의 경우
 regular B-spline patch에서 displacement mapping을 하기 위해서는 patch를 구성하는 16개의 점들 중, 안쪽의 4개 점들의 texture uv값을 이용한다. 이 값은 사전에 미리 처리되어 patch.txt에 저장되어 있어, 각 패치에 해당하는 vertex의 uv값을 가져올 수 있다.
-이때 주의할 점은 같은 vertex여도 서로 다른 uv값이 존재할 수 있다.
-따라서 patch의 안쪽 uv값만을 가져와야 한다.
 
 <img src="./imgs/patch_texture_uv.png" alt="Description" width="300">
 
@@ -468,11 +466,10 @@ regular B-spline patch에서 displacement mapping을 하기 위해서는 patch�
 
 <img src="./imgs/crack.png" alt="Description" width="300">
 
-다만 이렇게 하더라도 크랙은 생긴다. </br>
-그 이유는 하나의 vertex가 서로 다른 uv값이 존재할 수 있는데, </br>
-서로 맞닿는 패치 경계에서 다른 uv값으로 texture에 접근하고 있으며 textureLoad로 나온 값이 미세하게 차이가 있을 수 있기 때문이다. </br>
 
-이를 보완하기 위해서 patch에서 정보를 가져올 때 4개의 vertex에 대해 uv를 안쪽만이 아닌 전부 가져온다.
+그러나 서로 다른 texture가 맞닿는 texture seam의 경우, 하나의 vertex가 여러 uv값을 가질 수 있다. </br>
+이 경우 서로 맞닿는 patch 경계에서 다른 uv값으로 texture에 접근해 textureLoad로 나온 값의 미세한 차이로 인해 crack이 발생한다. </br>
+이를 보완하기 위해서 patch에서 정보를 가져올 때 기존의 4개의 uv값만이 아닌 아래 그림과 같이 16개의 uv값을 가져온다. 
 
 <img src="./imgs/patch_texture_uv_all.png" alt="Description" width="300">
 
@@ -482,10 +479,10 @@ regular B-spline patch에서 displacement mapping을 하기 위해서는 patch�
 ...
 ```
 
-이렇게 가져온 uv를 경계에서 통일 시켜줘야하며, 
-tesselation 적용 후의 vertex를 각각의 case에 나누어서 작업하였다.
+이렇게 가져온 uv를 경계에서 통일 시키기 위해, 
+tesselation 적용 후의 vertex를 3가지 case에 나누어서 작업하였다.
 
-1. patch의 꼭짓점에 있는 vertex(patch 4개에 포함된 vertex)
+### case 1 : patch 4개가 맞닿는 vertex 
 
 각 uv에서 textureLoad를 적용시킨 값을 뽑아내 4개의 값을 평균한다.
 
@@ -511,7 +508,7 @@ tesselation 적용 후의 vertex를 각각의 case에 나누어서 작업하였�
             }
 ```
 
-2. patch의 선에 포함된 vertex(patch 2개에 포함된 vertex)
+### case 2: patch 2개가 맞닿는 vertex
 
 선의 끝과 끝인 두 vertex의 uv를 내분 시키고, 이를 평균한다.
 
@@ -533,7 +530,7 @@ tesselation 적용 후의 vertex를 각각의 case에 나누어서 작업하였�
             }
 ```
 
-3. patch 안에 포함된 vertex
+### case 3 : patch 안에 포함된 vertex 
 
 다른 patch와 맞닿지 않는 vertex이므로, uv값 그대로 textureLoad한다.
 
