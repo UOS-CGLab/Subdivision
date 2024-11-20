@@ -229,32 +229,79 @@ export async function createPipelines(device, presentationFormat) {
         @group(1) @binding(2) var<storage, read> color: Color;
 
         fn B0(t: f32) -> f32 {
-            return (1.0/6.0)*(1.0-t)*(1.0-t)*(1.0-t);
+            var s = 1 - t;
+            return (1.0/6.0)*(s*s*s);
         }
         fn B0prime(t: f32) -> f32 {
-            return (-1.0/2.0)*(1.0-t)*(1.0-t);
+            var s = 1 - t;
+            return (1.0/6.0)*(-s*s);
         }
         fn B1(t: f32) -> f32 {
-            return (1.0/6.0)*(3.0*t*t*t - 6.0*t*t + 4.0);
+            var s = 1 - t;
+            return (1.0/6.0)*( (4.0*s*s*s + t*t*t) + (12.0*s*t*s + 6.0*t*s*t) );
         }
         fn B1prime(t: f32) -> f32 {
-            return (1.0/6.0)*(9.0*t*t - 12.0*t);
+            var s = 1 - t;
+            return (1.0/6.0)*( -t*t -4.0*t*s );
         }
         fn B2(t: f32) -> f32 {
-            return (1.0/6.0)*(-3.0*t*t*t + 3.0*t*t + 3.0*t + 1.0);
+            var s = 1 - t;
+            return (1.0/6.0)*( (4.0*t*t*t + s*s*s) + (12.0*t*s*t + 6.0*s*t*s) );
         }
         fn B2prime(t: f32) -> f32 {
-            return (1.0/6.0)*(-9.0*t*t + 6.0*t + 3.0);
+            var s = 1 - t;
+            return (1.0/6.0)*( s*s + 4.0*s*t );
         }
         fn B3(t: f32) -> f32 {
-            return (1.0/6.0)*t*t*t;
+            var s = 1 - t;
+            return (1.0/6.0)*(t*t*t);
         }
         fn B3prime(t: f32) -> f32 {
-            return (1.0/2.0)*t*t;
+            var s = 1 - t;
+            return (1.0/6.0)*t*t;
         }
+
+        // fn B0(t: f32) -> f32 {
+        //     return (1.0/6.0)*(1.0-t)*(1.0-t)*(1.0-t);
+        // }
+        // fn B0prime(t: f32) -> f32 {
+        //     return (-1.0/2.0)*(1.0-t)*(1.0-t);
+        // }
+        // fn B1(t: f32) -> f32 {
+        //     return (1.0/6.0)*(3.0*t*t*t - 6.0*t*t + 4.0);
+        // }
+        // fn B1prime(t: f32) -> f32 {
+        //     return (1.0/6.0)*(9.0*t*t - 12.0*t);
+        // }
+        // fn B2(t: f32) -> f32 {
+        //     return (1.0/6.0)*(-3.0*t*t*t + 3.0*t*t + 3.0*t + 1.0);
+        // }
+        // fn B2prime(t: f32) -> f32 {
+        //     return (1.0/6.0)*(-9.0*t*t + 6.0*t + 3.0);
+        // }
+        // fn B3(t: f32) -> f32 {
+        //     return (1.0/6.0)*t*t*t;
+        // }
+        // fn B3prime(t: f32) -> f32 {
+        //     return (1.0/2.0)*t*t;
+        // }
 
         fn length(t: vec3f) -> f32 {
             return sqrt(pow(t.x, 2)+pow(t.y, 2)+pow(t.z, 2));
+        }
+
+        fn makeuv(uv: vec2f) -> vec2f {
+            return vec2f(uv.x, 1-uv.y);
+        }
+
+        fn uvLinearInter(t: f32, uv1: vec2f, uv2: vec2f) -> vec2f {
+            var uv: vec2f = (1-t)*uv1 + t*uv2;
+            return makeuv(uv);
+        }
+        
+        fn getTexture(texture: texture_2d<f32>, sampler: sampler, uv: vec2f, level: f32) -> vec4f {
+            return textureSampleLevel(texture, sampler, uv, level);
+            // return textureLoad(texture, vec2i(uv*511), i32(level));
         }
 
         fn Sum_of_4value(a: f32, b:f32, c:f32, d:f32) -> f32 {
@@ -349,18 +396,10 @@ export async function createPipelines(device, presentationFormat) {
             if(vert.position.x == 0.0 && vert.position.y == 0.0) // changed
             {
                 textureValue = Sum_of_4value(
-                    textureSampleLevel(object_texture, sampler0,vec2f(
-                        base_UV[instanceIndex*16 + 0].x, (1-base_UV[instanceIndex*16 + 0].y)
-                    ), 0).x,
-                    textureSampleLevel(object_texture, sampler0,vec2f(
-                        base_UV[instanceIndex*16 + 1].x, (1-base_UV[instanceIndex*16 + 1].y)
-                    ), 0).x,
-                    textureSampleLevel(object_texture, sampler0,vec2f(
-                        base_UV[instanceIndex*16 + 2].x, (1-base_UV[instanceIndex*16 + 2].y)
-                    ), 0).x,
-                    textureSampleLevel(object_texture, sampler0,vec2f(
-                        base_UV[instanceIndex*16 + 3].x, (1-base_UV[instanceIndex*16 + 3].y)
-                    ), 0).x,
+                    getTexture(object_texture, sampler0, makeuv(base_UV[instanceIndex*16 + 0]), 0).x,
+                    getTexture(object_texture, sampler0, makeuv(base_UV[instanceIndex*16 + 1]), 0).x,
+                    getTexture(object_texture, sampler0, makeuv(base_UV[instanceIndex*16 + 2]), 0).x,
+                    getTexture(object_texture, sampler0, makeuv(base_UV[instanceIndex*16 + 3]), 0).x,
                 );
 
                 if(base_normal[  conn[instanceIndex*16+5]  ].x != 0)
@@ -377,18 +416,10 @@ export async function createPipelines(device, presentationFormat) {
             else if(vert.position.x == 0.0 && vert.position.y == 1.0) // changed
             {
                 textureValue = Sum_of_4value(
-                    textureSampleLevel(object_texture, sampler0,vec2f(
-                        base_UV[instanceIndex*16 + 4].x, (1-base_UV[instanceIndex*16 + 4].y)
-                    ), 0).x,
-                    textureSampleLevel(object_texture, sampler0,vec2f(
-                        base_UV[instanceIndex*16 + 5].x, (1-base_UV[instanceIndex*16 + 5].y)
-                    ), 0).x,
-                    textureSampleLevel(object_texture, sampler0,vec2f(
-                        base_UV[instanceIndex*16 + 6].x, (1-base_UV[instanceIndex*16 + 6].y)
-                    ), 0).x,
-                    textureSampleLevel(object_texture, sampler0,vec2f(
-                        base_UV[instanceIndex*16 + 7].x, (1-base_UV[instanceIndex*16 + 7].y)
-                    ), 0).x,
+                    getTexture(object_texture, sampler0, makeuv(base_UV[instanceIndex*16 + 4]), 0).x,
+                    getTexture(object_texture, sampler0, makeuv(base_UV[instanceIndex*16 + 5]), 0).x,
+                    getTexture(object_texture, sampler0, makeuv(base_UV[instanceIndex*16 + 6]), 0).x,
+                    getTexture(object_texture, sampler0, makeuv(base_UV[instanceIndex*16 + 7]), 0).x,
                 );
 
                 if(base_normal[  conn[instanceIndex*16+6]  ].x != 0)
@@ -405,18 +436,10 @@ export async function createPipelines(device, presentationFormat) {
             else if(vert.position.x == 1.0 && vert.position.y == 0.0) // changed
             {
                 textureValue = Sum_of_4value(
-                    textureSampleLevel(object_texture, sampler0,vec2f(
-                        base_UV[instanceIndex*16 + 8].x, (1-base_UV[instanceIndex*16 + 8].y)
-                    ), 0).x,
-                    textureSampleLevel(object_texture, sampler0,vec2f(
-                        base_UV[instanceIndex*16 + 9].x, (1-base_UV[instanceIndex*16 + 9].y)
-                    ), 0).x,
-                    textureSampleLevel(object_texture, sampler0,vec2f(
-                        base_UV[instanceIndex*16 +10].x, (1-base_UV[instanceIndex*16 +10].y)
-                    ), 0).x,
-                    textureSampleLevel(object_texture, sampler0,vec2f(
-                        base_UV[instanceIndex*16 +11].x, (1-base_UV[instanceIndex*16 +11].y)
-                    ), 0).x,
+                    getTexture(object_texture, sampler0, makeuv(base_UV[instanceIndex*16 + 8]), 0).x,
+                    getTexture(object_texture, sampler0, makeuv(base_UV[instanceIndex*16 + 9]), 0).x,
+                    getTexture(object_texture, sampler0, makeuv(base_UV[instanceIndex*16 +10]), 0).x,
+                    getTexture(object_texture, sampler0, makeuv(base_UV[instanceIndex*16 +11]), 0).x,
                 );
 
                 if(base_normal[  conn[instanceIndex*16+9]  ].x != 0)
@@ -433,18 +456,10 @@ export async function createPipelines(device, presentationFormat) {
             else if(vert.position.x == 1.0 && vert.position.y == 1.0) // changed
             {
                 textureValue = Sum_of_4value(
-                    textureSampleLevel(object_texture, sampler0,vec2f(
-                        base_UV[instanceIndex*16 +12].x, (1-base_UV[instanceIndex*16 +12].y)
-                    ), 0).x,
-                    textureSampleLevel(object_texture, sampler0,vec2f(
-                        base_UV[instanceIndex*16 +13].x, (1-base_UV[instanceIndex*16 +13].y)
-                    ), 0).x,
-                    textureSampleLevel(object_texture, sampler0,vec2f(
-                        base_UV[instanceIndex*16 +14].x, (1-base_UV[instanceIndex*16 +14].y)
-                    ), 0).x,
-                    textureSampleLevel(object_texture, sampler0,vec2f(
-                        base_UV[instanceIndex*16 +15].x, (1-base_UV[instanceIndex*16 +15].y)
-                    ), 0).x,
+                    getTexture(object_texture, sampler0, makeuv(base_UV[instanceIndex*16 +12]), 0).x,
+                    getTexture(object_texture, sampler0, makeuv(base_UV[instanceIndex*16 +13]), 0).x,
+                    getTexture(object_texture, sampler0, makeuv(base_UV[instanceIndex*16 +14]), 0).x,
+                    getTexture(object_texture, sampler0, makeuv(base_UV[instanceIndex*16 +15]), 0).x,
                 );
 
                 if(base_normal[  conn[instanceIndex*16+10]  ].x != 0)
@@ -461,14 +476,12 @@ export async function createPipelines(device, presentationFormat) {
             else if(vert.position.y == 0.0) // changed
             {
                 textureValue = Sum_of_2value(
-                    textureSampleLevel(object_texture, sampler0,vec2f(
-                        (   (1-vert.position.x) * base_UV[instanceIndex*16 +  0] + vert.position.x * base_UV[instanceIndex*16 +  8] ).x,
-                        (1-((1-vert.position.x) * base_UV[instanceIndex*16 +  0] + vert.position.x * base_UV[instanceIndex*16 +  8])).y
+                    getTexture(object_texture, sampler0,uvLinearInter(
+                        vert.position.x, base_UV[instanceIndex*16 +  0], base_UV[instanceIndex*16 +  8]
                     ), 0).x,
-                    textureSampleLevel(object_texture, sampler0,vec2f(
-                        (   (1-vert.position.x) * base_UV[instanceIndex*16 +  1] + vert.position.x * base_UV[instanceIndex*16 + 11] ).x,
-                        (1-((1-vert.position.x) * base_UV[instanceIndex*16 +  1] + vert.position.x * base_UV[instanceIndex*16 + 11])).y
-                    ), 0).x
+                    getTexture(object_texture, sampler0, uvLinearInter(
+                        vert.position.x, base_UV[instanceIndex*16 +  1], base_UV[instanceIndex*16 +  11]
+                    ), 0).x,
                 );
 
                 // textureValue =((   (1-vert.position.x) * base_UV[instanceIndex*16 +  0] + vert.position.x * base_UV[instanceIndex*16 + 8] ).y
@@ -477,13 +490,11 @@ export async function createPipelines(device, presentationFormat) {
             else if(vert.position.y == 1.0) // changed
             {
                 textureValue = Sum_of_2value(
-                    textureSampleLevel(object_texture, sampler0,vec2f(
-                        (   (1-vert.position.x) * base_UV[instanceIndex*16 +  4] + vert.position.x * base_UV[instanceIndex*16 + 12] ).x,
-                        (1-((1-vert.position.x) * base_UV[instanceIndex*16 +  4] + vert.position.x * base_UV[instanceIndex*16 + 12])).y
+                    getTexture(object_texture, sampler0, uvLinearInter(
+                        vert.position.x, base_UV[instanceIndex*16 +  4], base_UV[instanceIndex*16 +  12]
                     ), 0).x,
-                    textureSampleLevel(object_texture, sampler0,vec2f(
-                        (   (1-vert.position.x) * base_UV[instanceIndex*16 +  7] + vert.position.x * base_UV[instanceIndex*16 + 13] ).x,
-                        (1-((1-vert.position.x) * base_UV[instanceIndex*16 +  7] + vert.position.x * base_UV[instanceIndex*16 + 13])).y
+                    getTexture(object_texture, sampler0, uvLinearInter(
+                        vert.position.x, base_UV[instanceIndex*16 +  7], base_UV[instanceIndex*16 +  13]
                     ), 0).x
                 );
 
@@ -493,13 +504,11 @@ export async function createPipelines(device, presentationFormat) {
             else if(vert.position.x == 0.0) // changed
             {
                 textureValue = Sum_of_2value(
-                    textureSampleLevel(object_texture, sampler0,vec2f(
-                        (   (1-vert.position.y) * base_UV[instanceIndex*16 +  0] + vert.position.y * base_UV[instanceIndex*16 +  4] ).x,
-                        (1-((1-vert.position.y) * base_UV[instanceIndex*16 +  0] + vert.position.y * base_UV[instanceIndex*16 +  4])).y
+                    getTexture(object_texture, sampler0, uvLinearInter(
+                        vert.position.y, base_UV[instanceIndex*16 +  0], base_UV[instanceIndex*16 +  4]
                     ), 0).x,
-                    textureSampleLevel(object_texture, sampler0,vec2f(
-                        (   (1-vert.position.y) * base_UV[instanceIndex*16 +  3] + vert.position.y * base_UV[instanceIndex*16 +  5] ).x,
-                        (1-((1-vert.position.y) * base_UV[instanceIndex*16 +  3] + vert.position.y * base_UV[instanceIndex*16 +  5])).y
+                    getTexture(object_texture, sampler0, uvLinearInter(
+                        vert.position.y, base_UV[instanceIndex*16 +  3], base_UV[instanceIndex*16 +  5]
                     ), 0).x
                 );
 
@@ -509,13 +518,11 @@ export async function createPipelines(device, presentationFormat) {
             else if(vert.position.x == 1.0) // changed
             {
                 textureValue = Sum_of_2value(
-                    textureSampleLevel(object_texture, sampler0,vec2f(
-                        (   (1-vert.position.y) * base_UV[instanceIndex*16 +  8] + vert.position.y * base_UV[instanceIndex*16 + 12] ).x,
-                        (1-((1-vert.position.y) * base_UV[instanceIndex*16 +  8] + vert.position.y * base_UV[instanceIndex*16 + 12])).y
+                    getTexture(object_texture, sampler0, uvLinearInter(
+                        vert.position.y, base_UV[instanceIndex*16 +  8], base_UV[instanceIndex*16 +  12]
                     ), 0).x,
-                    textureSampleLevel(object_texture, sampler0,vec2f(
-                        (   (1-vert.position.y) * base_UV[instanceIndex*16 +  9] + vert.position.y * base_UV[instanceIndex*16 + 15] ).x,
-                        (1-((1-vert.position.y) * base_UV[instanceIndex*16 +  9] + vert.position.y * base_UV[instanceIndex*16 + 15])).y
+                    getTexture(object_texture, sampler0, uvLinearInter(
+                        vert.position.y, base_UV[instanceIndex*16 +  9], base_UV[instanceIndex*16 +  15]
                     ), 0).x
                 );
 
@@ -527,7 +534,7 @@ export async function createPipelines(device, presentationFormat) {
             {
                 // textureValue = textureSampleLevel(object_texture, sampler0,texCoordInt, 0).x;
                 // textureValue = textureSample(object_texture, sampler0,sampler0, vec2f(uv.x, 1-uv.y)).x;
-                textureValue = textureSampleLevel(object_texture, sampler0, vec2f(uv.x, 1-uv.y), 0).x;
+                textureValue = getTexture(object_texture, sampler0, vec2f(uv.x, 1-uv.y), 0).x;
                 // textureValue = uv.y;
             }
 
@@ -621,6 +628,12 @@ export async function createPipelines(device, presentationFormat) {
             @location(2) texcoord1: vec2f,
         };
 
+        fn getTexture(texture: texture_2d<f32>, sampler: sampler, uv: vec2f, level: f32) -> vec4f
+        {
+            return textureSampleLevel(texture, sampler, uv, level);
+            // return textureLoad(texture, uv, level);
+        }
+
         @group(0) @binding(0) var<uniform> uni: Uniforms;
         @group(0) @binding(1) var<storage, read> extra_index_storage_buffer: array<u32>;
         @group(0) @binding(2) var<storage, read> extra_base_UV: array<vec2f>;
@@ -652,7 +665,7 @@ export async function createPipelines(device, presentationFormat) {
             var sum: f32 = 0.0;
             for(var i=0; i<vertex_count; i++)
             {
-                sum = sum + textureSampleLevel(object_texture, sampler0, vec2f(extra_base_UV[index+i].x, (1-extra_base_UV[index+i].y)), 0).x;
+                sum = sum + getTexture(object_texture, sampler0, vec2f(extra_base_UV[index+i].x, (1-extra_base_UV[index+i].y)), 0).x;
             }
             let textureValue = sum / f32(vertex_count);
             
