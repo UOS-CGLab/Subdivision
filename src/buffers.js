@@ -342,9 +342,9 @@ export async function buffers(device, depth, obj, limit, myString){
     let { indices, texcoordDatas, indexBuffers, vertexBuffers } = create_texture_buffers(device, depth)
     
     let sampler = device.createSampler({
-        magFilter: 'linear',
-        minFilter: 'linear',
-        mipmapFilter: 'linear',   // MIP 맵 필터링을 선형 보간으로 설정
+        magFilter: 'nearest',
+        minFilter: 'nearest',
+        mipmapFilter: 'nearest',   // MIP 맵 필터링을 선형 보간으로 설정
     });
 
     let Base_Vertex_Buffer = device.createBuffer({

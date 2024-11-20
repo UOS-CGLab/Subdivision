@@ -342,161 +342,196 @@ export async function createPipelines(device, presentationFormat) {
             let uv              = vec2f(   vert.position.x *patchImageLowX)
                                 + vec2f((1-vert.position.x)*patchImageHighX);
             
-            let texCoordInt = vec2i(  i32(uv.x*512.0),  i32((1-uv.y)*512.0)  );
+            let texCoordInt = vec2i(  i32(uv.x),  i32((1-uv.y))  );
 
             var textureValue: f32;
 
             if(vert.position.x == 0.0 && vert.position.y == 0.0) // changed
             {
                 textureValue = Sum_of_4value(
-                    textureLoad(object_texture, vec2i(vec2f(
-                        base_UV[instanceIndex*16 + 0].x*512, (1-base_UV[instanceIndex*16 + 0].y)*512
-                    )), 0).x,
-                    textureLoad(object_texture, vec2i(vec2f(
-                        base_UV[instanceIndex*16 + 1].x*512, (1-base_UV[instanceIndex*16 + 1].y)*512
-                    )), 0).x,
-                    textureLoad(object_texture, vec2i(vec2f(
-                        base_UV[instanceIndex*16 + 2].x*512, (1-base_UV[instanceIndex*16 + 2].y)*512
-                    )), 0).x,
-                    textureLoad(object_texture, vec2i(vec2f(
-                        base_UV[instanceIndex*16 + 3].x*512, (1-base_UV[instanceIndex*16 + 3].y)*512
-                    )), 0).x,
+                    textureSampleLevel(object_texture, sampler0,vec2f(
+                        base_UV[instanceIndex*16 + 0].x, (1-base_UV[instanceIndex*16 + 0].y)
+                    ), 0).x,
+                    textureSampleLevel(object_texture, sampler0,vec2f(
+                        base_UV[instanceIndex*16 + 1].x, (1-base_UV[instanceIndex*16 + 1].y)
+                    ), 0).x,
+                    textureSampleLevel(object_texture, sampler0,vec2f(
+                        base_UV[instanceIndex*16 + 2].x, (1-base_UV[instanceIndex*16 + 2].y)
+                    ), 0).x,
+                    textureSampleLevel(object_texture, sampler0,vec2f(
+                        base_UV[instanceIndex*16 + 3].x, (1-base_UV[instanceIndex*16 + 3].y)
+                    ), 0).x,
                 );
 
                 if(base_normal[  conn[instanceIndex*16+5]  ].x != 0)
                 {
                     normal = -base_normal[  conn[instanceIndex*16+5]  ].xyz;
                 }
+
+                // textureValue = (base_UV[instanceIndex*16 +0].y
+                //             +   base_UV[instanceIndex*16 +1].y
+                //             +   base_UV[instanceIndex*16 +2].y
+                //             +   base_UV[instanceIndex*16 +3].y ) / 4;
             }
 
             else if(vert.position.x == 0.0 && vert.position.y == 1.0) // changed
             {
                 textureValue = Sum_of_4value(
-                    textureLoad(object_texture, vec2i(vec2f(
-                        base_UV[instanceIndex*16 + 4].x*512, (1-base_UV[instanceIndex*16 + 4].y)*512
-                    )), 0).x,
-                    textureLoad(object_texture, vec2i(vec2f(
-                        base_UV[instanceIndex*16 + 5].x*512, (1-base_UV[instanceIndex*16 + 5].y)*512
-                    )), 0).x,
-                    textureLoad(object_texture, vec2i(vec2f(
-                        base_UV[instanceIndex*16 + 6].x*512, (1-base_UV[instanceIndex*16 + 6].y)*512
-                    )), 0).x,
-                    textureLoad(object_texture, vec2i(vec2f(
-                        base_UV[instanceIndex*16 + 7].x*512, (1-base_UV[instanceIndex*16 + 7].y)*512
-                    )), 0).x,
+                    textureSampleLevel(object_texture, sampler0,vec2f(
+                        base_UV[instanceIndex*16 + 4].x, (1-base_UV[instanceIndex*16 + 4].y)
+                    ), 0).x,
+                    textureSampleLevel(object_texture, sampler0,vec2f(
+                        base_UV[instanceIndex*16 + 5].x, (1-base_UV[instanceIndex*16 + 5].y)
+                    ), 0).x,
+                    textureSampleLevel(object_texture, sampler0,vec2f(
+                        base_UV[instanceIndex*16 + 6].x, (1-base_UV[instanceIndex*16 + 6].y)
+                    ), 0).x,
+                    textureSampleLevel(object_texture, sampler0,vec2f(
+                        base_UV[instanceIndex*16 + 7].x, (1-base_UV[instanceIndex*16 + 7].y)
+                    ), 0).x,
                 );
 
                 if(base_normal[  conn[instanceIndex*16+6]  ].x != 0)
                 {
                     normal = -base_normal[  conn[instanceIndex*16+6]  ].xyz;
                 }
+
+                // textureValue = (base_UV[instanceIndex*16 +4].y
+                //             +   base_UV[instanceIndex*16 +5].y
+                //             +   base_UV[instanceIndex*16 +6].y
+                //             +   base_UV[instanceIndex*16 +7].y ) / 4;
             }
 
             else if(vert.position.x == 1.0 && vert.position.y == 0.0) // changed
             {
                 textureValue = Sum_of_4value(
-                    textureLoad(object_texture, vec2i(vec2f(
-                        base_UV[instanceIndex*16 + 8].x*512, (1-base_UV[instanceIndex*16 + 8].y)*512
-                    )), 0).x,
-                    textureLoad(object_texture, vec2i(vec2f(
-                        base_UV[instanceIndex*16 + 9].x*512, (1-base_UV[instanceIndex*16 + 9].y)*512
-                    )), 0).x,
-                    textureLoad(object_texture, vec2i(vec2f(
-                        base_UV[instanceIndex*16 +10].x*512, (1-base_UV[instanceIndex*16 +10].y)*512
-                    )), 0).x,
-                    textureLoad(object_texture, vec2i(vec2f(
-                        base_UV[instanceIndex*16 +11].x*512, (1-base_UV[instanceIndex*16 +11].y)*512
-                    )), 0).x,
+                    textureSampleLevel(object_texture, sampler0,vec2f(
+                        base_UV[instanceIndex*16 + 8].x, (1-base_UV[instanceIndex*16 + 8].y)
+                    ), 0).x,
+                    textureSampleLevel(object_texture, sampler0,vec2f(
+                        base_UV[instanceIndex*16 + 9].x, (1-base_UV[instanceIndex*16 + 9].y)
+                    ), 0).x,
+                    textureSampleLevel(object_texture, sampler0,vec2f(
+                        base_UV[instanceIndex*16 +10].x, (1-base_UV[instanceIndex*16 +10].y)
+                    ), 0).x,
+                    textureSampleLevel(object_texture, sampler0,vec2f(
+                        base_UV[instanceIndex*16 +11].x, (1-base_UV[instanceIndex*16 +11].y)
+                    ), 0).x,
                 );
 
                 if(base_normal[  conn[instanceIndex*16+9]  ].x != 0)
                 {
                     normal = -base_normal[  conn[instanceIndex*16+9]  ].xyz;
                 }
+
+                // textureValue = (base_UV[instanceIndex*16 +8].y
+                //             +   base_UV[instanceIndex*16 +9].y
+                //             +   base_UV[instanceIndex*16 +10].y
+                //             +   base_UV[instanceIndex*16 +11].y ) / 4;
             }
 
             else if(vert.position.x == 1.0 && vert.position.y == 1.0) // changed
             {
                 textureValue = Sum_of_4value(
-                    textureLoad(object_texture, vec2i(vec2f(
-                        base_UV[instanceIndex*16 +12].x*512, (1-base_UV[instanceIndex*16 +12].y)*512
-                    )), 0).x,
-                    textureLoad(object_texture, vec2i(vec2f(
-                        base_UV[instanceIndex*16 +13].x*512, (1-base_UV[instanceIndex*16 +13].y)*512
-                    )), 0).x,
-                    textureLoad(object_texture, vec2i(vec2f(
-                        base_UV[instanceIndex*16 +14].x*512, (1-base_UV[instanceIndex*16 +14].y)*512
-                    )), 0).x,
-                    textureLoad(object_texture, vec2i(vec2f(
-                        base_UV[instanceIndex*16 +15].x*512, (1-base_UV[instanceIndex*16 +15].y)*512
-                    )), 0).x,
+                    textureSampleLevel(object_texture, sampler0,vec2f(
+                        base_UV[instanceIndex*16 +12].x, (1-base_UV[instanceIndex*16 +12].y)
+                    ), 0).x,
+                    textureSampleLevel(object_texture, sampler0,vec2f(
+                        base_UV[instanceIndex*16 +13].x, (1-base_UV[instanceIndex*16 +13].y)
+                    ), 0).x,
+                    textureSampleLevel(object_texture, sampler0,vec2f(
+                        base_UV[instanceIndex*16 +14].x, (1-base_UV[instanceIndex*16 +14].y)
+                    ), 0).x,
+                    textureSampleLevel(object_texture, sampler0,vec2f(
+                        base_UV[instanceIndex*16 +15].x, (1-base_UV[instanceIndex*16 +15].y)
+                    ), 0).x,
                 );
 
                 if(base_normal[  conn[instanceIndex*16+10]  ].x != 0)
                 {
                     normal = -base_normal[  conn[instanceIndex*16+10]  ].xyz;
                 }
+
+                // textureValue = (base_UV[instanceIndex*16 +12].y
+                //             +   base_UV[instanceIndex*16 +13].y
+                //             +   base_UV[instanceIndex*16 +14].y
+                //             +   base_UV[instanceIndex*16 +15].y ) / 4;
             }
     
             else if(vert.position.y == 0.0) // changed
             {
                 textureValue = Sum_of_2value(
-                    textureLoad(object_texture, vec2i(vec2f(
-                        (   (1-vert.position.x) * base_UV[instanceIndex*16 +  0] + vert.position.x * base_UV[instanceIndex*16 +  8] ).x*512,
-                        (1-((1-vert.position.x) * base_UV[instanceIndex*16 +  0] + vert.position.x * base_UV[instanceIndex*16 +  8])).y*512
-                    )), 0).x,
-                    textureLoad(object_texture, vec2i(vec2f(
-                        (   (1-vert.position.x) * base_UV[instanceIndex*16 +  1] + vert.position.x * base_UV[instanceIndex*16 + 11] ).x*512,
-                        (1-((1-vert.position.x) * base_UV[instanceIndex*16 +  1] + vert.position.x * base_UV[instanceIndex*16 + 11])).y*512
-                    )), 0).x
+                    textureSampleLevel(object_texture, sampler0,vec2f(
+                        (   (1-vert.position.x) * base_UV[instanceIndex*16 +  0] + vert.position.x * base_UV[instanceIndex*16 +  8] ).x,
+                        (1-((1-vert.position.x) * base_UV[instanceIndex*16 +  0] + vert.position.x * base_UV[instanceIndex*16 +  8])).y
+                    ), 0).x,
+                    textureSampleLevel(object_texture, sampler0,vec2f(
+                        (   (1-vert.position.x) * base_UV[instanceIndex*16 +  1] + vert.position.x * base_UV[instanceIndex*16 + 11] ).x,
+                        (1-((1-vert.position.x) * base_UV[instanceIndex*16 +  1] + vert.position.x * base_UV[instanceIndex*16 + 11])).y
+                    ), 0).x
                 );
+
+                // textureValue =((   (1-vert.position.x) * base_UV[instanceIndex*16 +  0] + vert.position.x * base_UV[instanceIndex*16 + 8] ).y
+                //             +  (   (1-vert.position.x) * base_UV[instanceIndex*16 +  1] + vert.position.x * base_UV[instanceIndex*16 + 11] ).y) / 2;
             }
             else if(vert.position.y == 1.0) // changed
             {
                 textureValue = Sum_of_2value(
-                    textureLoad(object_texture, vec2i(vec2f(
-                        (   (1-vert.position.x) * base_UV[instanceIndex*16 +  4] + vert.position.x * base_UV[instanceIndex*16 + 12] ).x*512,
-                        (1-((1-vert.position.x) * base_UV[instanceIndex*16 +  4] + vert.position.x * base_UV[instanceIndex*16 + 12])).y*512
-                    )), 0).x,
-                    textureLoad(object_texture, vec2i(vec2f(
-                        (   (1-vert.position.x) * base_UV[instanceIndex*16 +  7] + vert.position.x * base_UV[instanceIndex*16 + 13] ).x*512,
-                        (1-((1-vert.position.x) * base_UV[instanceIndex*16 +  7] + vert.position.x * base_UV[instanceIndex*16 + 13])).y*512
-                    )), 0).x
+                    textureSampleLevel(object_texture, sampler0,vec2f(
+                        (   (1-vert.position.x) * base_UV[instanceIndex*16 +  4] + vert.position.x * base_UV[instanceIndex*16 + 12] ).x,
+                        (1-((1-vert.position.x) * base_UV[instanceIndex*16 +  4] + vert.position.x * base_UV[instanceIndex*16 + 12])).y
+                    ), 0).x,
+                    textureSampleLevel(object_texture, sampler0,vec2f(
+                        (   (1-vert.position.x) * base_UV[instanceIndex*16 +  7] + vert.position.x * base_UV[instanceIndex*16 + 13] ).x,
+                        (1-((1-vert.position.x) * base_UV[instanceIndex*16 +  7] + vert.position.x * base_UV[instanceIndex*16 + 13])).y
+                    ), 0).x
                 );
+
+                // textureValue =((   (1-vert.position.x) * base_UV[instanceIndex*16 +  4] + vert.position.x * base_UV[instanceIndex*16 + 12] ).y
+                //             +  (   (1-vert.position.x) * base_UV[instanceIndex*16 +  7] + vert.position.x * base_UV[instanceIndex*16 + 13] ).y) / 2;
             }
             else if(vert.position.x == 0.0) // changed
             {
                 textureValue = Sum_of_2value(
-                    textureLoad(object_texture, vec2i(vec2f(
-                        (   (1-vert.position.y) * base_UV[instanceIndex*16 +  0] + vert.position.y * base_UV[instanceIndex*16 +  4] ).x*512,
-                        (1-((1-vert.position.y) * base_UV[instanceIndex*16 +  0] + vert.position.y * base_UV[instanceIndex*16 +  4])).y*512
-                    )), 0).x,
-                    textureLoad(object_texture, vec2i(vec2f(
-                        (   (1-vert.position.y) * base_UV[instanceIndex*16 +  3] + vert.position.y * base_UV[instanceIndex*16 +  5] ).x*512,
-                        (1-((1-vert.position.y) * base_UV[instanceIndex*16 +  3] + vert.position.y * base_UV[instanceIndex*16 +  5])).y*512
-                    )), 0).x
+                    textureSampleLevel(object_texture, sampler0,vec2f(
+                        (   (1-vert.position.y) * base_UV[instanceIndex*16 +  0] + vert.position.y * base_UV[instanceIndex*16 +  4] ).x,
+                        (1-((1-vert.position.y) * base_UV[instanceIndex*16 +  0] + vert.position.y * base_UV[instanceIndex*16 +  4])).y
+                    ), 0).x,
+                    textureSampleLevel(object_texture, sampler0,vec2f(
+                        (   (1-vert.position.y) * base_UV[instanceIndex*16 +  3] + vert.position.y * base_UV[instanceIndex*16 +  5] ).x,
+                        (1-((1-vert.position.y) * base_UV[instanceIndex*16 +  3] + vert.position.y * base_UV[instanceIndex*16 +  5])).y
+                    ), 0).x
                 );
+
+                // textureValue =((   (1-vert.position.y) * base_UV[instanceIndex*16 +  0] + vert.position.y * base_UV[instanceIndex*16 + 4] ).y
+                //             +  (   (1-vert.position.y) * base_UV[instanceIndex*16 +  3] + vert.position.y * base_UV[instanceIndex*16 + 5] ).y) / 2;
             }
             else if(vert.position.x == 1.0) // changed
             {
                 textureValue = Sum_of_2value(
-                    textureLoad(object_texture, vec2i(vec2f(
-                        (   (1-vert.position.y) * base_UV[instanceIndex*16 +  8] + vert.position.y * base_UV[instanceIndex*16 + 12] ).x*512,
-                        (1-((1-vert.position.y) * base_UV[instanceIndex*16 +  8] + vert.position.y * base_UV[instanceIndex*16 + 12])).y*512
-                    )), 0).x,
-                    textureLoad(object_texture, vec2i(vec2f(
-                        (   (1-vert.position.y) * base_UV[instanceIndex*16 +  9] + vert.position.y * base_UV[instanceIndex*16 + 15] ).x*512,
-                        (1-((1-vert.position.y) * base_UV[instanceIndex*16 +  9] + vert.position.y * base_UV[instanceIndex*16 + 15])).y*512
-                    )), 0).x
+                    textureSampleLevel(object_texture, sampler0,vec2f(
+                        (   (1-vert.position.y) * base_UV[instanceIndex*16 +  8] + vert.position.y * base_UV[instanceIndex*16 + 12] ).x,
+                        (1-((1-vert.position.y) * base_UV[instanceIndex*16 +  8] + vert.position.y * base_UV[instanceIndex*16 + 12])).y
+                    ), 0).x,
+                    textureSampleLevel(object_texture, sampler0,vec2f(
+                        (   (1-vert.position.y) * base_UV[instanceIndex*16 +  9] + vert.position.y * base_UV[instanceIndex*16 + 15] ).x,
+                        (1-((1-vert.position.y) * base_UV[instanceIndex*16 +  9] + vert.position.y * base_UV[instanceIndex*16 + 15])).y
+                    ), 0).x
                 );
+
+                // textureValue =((   (1-vert.position.y) * base_UV[instanceIndex*16 +  8] + vert.position.y * base_UV[instanceIndex*16 + 12] ).y
+                //             +  (   (1-vert.position.y) * base_UV[instanceIndex*16 +  9] + vert.position.y * base_UV[instanceIndex*16 + 15] ).y) / 2;
             }
 
             else
             {
-                textureValue = textureLoad(object_texture, texCoordInt, 0).x;
+                // textureValue = textureSampleLevel(object_texture, sampler0,texCoordInt, 0).x;
+                // textureValue = textureSample(object_texture, sampler0,sampler0, vec2f(uv.x, 1-uv.y)).x;
+                textureValue = textureSampleLevel(object_texture, sampler0, vec2f(uv.x, 1-uv.y), 0).x;
+                // textureValue = uv.y;
             }
 
-            // let textureValue = f32(round(80*(pow(20, textureLoad(object_texture, texCoordInt, 0).x - 0.5)/4.5)))/80.0; // textureLoad 뽑아내면 될듯
+            // let textureValue = f32(round(80*(pow(20, textureSampleLevel(object_texture, sampler0,texCoordInt, 0).x - 0.5)/4.5)))/80.0; // textureSampleLevel 뽑아내면 될듯
 
             // vsOut.position = uni.matrix * vec4f(p*5, 1);
             if(textureValue-0.5 < 0)
@@ -512,7 +547,7 @@ export async function createPipelines(device, presentationFormat) {
             // vsOut.position = uni.matrix * vec4f(p*5 + textureValue*20, 1);
             // vsOut.position = uni.matrix * vec4f(p*5 + normal*2, 1);
 
-            // vsOut.position = uni.matrix * vec4f(p*5 + normal*(textureValue-0.5)*30, 1);
+            // vsOut.position = uni.matrix * vec4f(p*5 + normal*(textureValue)*uni.displacementValue.x, 1);
 
             vsOut.center = vec3f(vert.position.xy, 0);
             vsOut.texcoord = vec2f(uv.x, 1-uv.y);
@@ -542,7 +577,7 @@ export async function createPipelines(device, presentationFormat) {
         }
 
         @fragment fn fs(vsOut: VSOutput) -> @location(0) vec4f {
-            // let temp = textureSample(object_texture, sampler0, vsOut.texcoord); // textureLoad 뽑아내면 될듯
+            // let temp = textureSample(object_texture, sampler0,sampler0, vsOut.texcoord); // textureSampleLevel 뽑아내면 될듯
             // if(vsOut.normal.z < 0.0)
             // {
             //     discard;
@@ -554,6 +589,7 @@ export async function createPipelines(device, presentationFormat) {
             // return vec4f(vsOut.color);
             // return vec4f(temp.xyz*5 - 2.5, 1);
             return vec4f(vsOut.texcoord1.x*5 -2.5, vsOut.texcoord1.x*5 -2.5, vsOut.texcoord1.x*5 -2.5, 1);
+            // return vec4f(vsOut.texcoord1.x, vsOut.texcoord1.x, vsOut.texcoord1.x, 1);
         }
         `,
     });
@@ -616,14 +652,14 @@ export async function createPipelines(device, presentationFormat) {
             var sum: f32 = 0.0;
             for(var i=0; i<vertex_count; i++)
             {
-                sum = sum + textureLoad(object_texture, vec2i(vec2f(extra_base_UV[index+i].x*512, (1-extra_base_UV[index+i].y)*512)), 0).x;
+                sum = sum + textureSampleLevel(object_texture, sampler0, vec2f(extra_base_UV[index+i].x, (1-extra_base_UV[index+i].y)), 0).x;
             }
             let textureValue = sum / f32(vertex_count);
             
             let uv = extra_base_UV[vertexIndex];
             vsOut.texcoord = vec2f(uv.x, 1-uv.y);
             vsOut.texcoord1 = vec2f(textureValue, 0);
-            let texCoordInt = vec2i(  i32(uv.x*512.0),  i32((1-uv.y)*512.0)  );
+            let texCoordInt = vec2i(  i32(uv.x),  i32((1-uv.y))  );
 
             // let p = vert.position.xyz;
             let p = vec3f(base_vertex[extra_index_storage_buffer[vertexIndex]].xyz);
@@ -649,7 +685,7 @@ export async function createPipelines(device, presentationFormat) {
         }
 
         @fragment fn fs(vsOut: VSOutput) -> @location(0) vec4f {
-            let temp = textureSample(object_texture, sampler0, vsOut.texcoord); // textureLoad 뽑아내면 될듯
+            let temp = textureSample(object_texture, sampler0, vsOut.texcoord); // textureSampleLevel 뽑아내면 될듯
             // return vec4f(temp.xyz*5 - 2.5, 1);
             // return vec4f(vsOut.texcoord, 0, 1);
             // return vec4f(0.5, 0, 0, 1);
