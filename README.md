@@ -484,7 +484,7 @@ tesselation 적용 후의 vertex를 3가지 case에 나누어서 작업하였다
 
 ### case 1 : patch 4개가 맞닿는 vertex 
 
-각 uv에서 textureLoad를 적용시킨 값을 뽑아내 4개의 값을 평균한다.
+각 uv에서 textureLoad를 적용시킨 값을 4로 나눈 평균값을 적용한다.
 
 <img src="./imgs/case1.png" alt="Description" width="300">
 
@@ -510,7 +510,7 @@ tesselation 적용 후의 vertex를 3가지 case에 나누어서 작업하였다
 
 ### case 2: patch 2개가 맞닿는 vertex
 
-선의 끝과 끝인 두 vertex의 uv를 내분 시키고, 이를 평균한다.
+선의 끝과 끝인 두 vertex의 uv를 내분한 뒤, 각각 uv값에 대하여 textrueLoad한 후 texture값의 평균값을 적용한다
 
 <img src="./imgs/case2.png" alt="Description" width="300">
 
@@ -532,7 +532,7 @@ tesselation 적용 후의 vertex를 3가지 case에 나누어서 작업하였다
 
 ### case 3 : patch 안에 포함된 vertex 
 
-다른 patch와 맞닿지 않는 vertex이므로, uv값 그대로 textureLoad한다.
+다른 patch와 맞닿지 않는 vertex이므로, 기존의 uv값에 그대로 textureLoad를 적용한다.
 
 ```javascript
             else
