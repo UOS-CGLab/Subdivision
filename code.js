@@ -77,6 +77,7 @@ async function main() {
         colorAttachments: [
         {
             // view: <- to be filled out when we render
+            clearValue: { r: 0.0, g: 1.0, b: 1.0, a: 1.0 },
             loadOp: 'clear',
             storeOp: 'store',
         },
@@ -101,6 +102,7 @@ async function main() {
         colorAttachments: [
         {
             //view: swapChain.getCurrentTextureView(),
+            clearValue: { r: 0.0, g: 1.0, b: 1.0, a: 1.0 },
             loadOp: 'load',
             storeOp: 'store',
         },
@@ -171,8 +173,6 @@ async function main() {
         timeValue[0] = now;
         wireValue[0] = settings.getProterty('wireAdjust');
         displacementValue[0] = settings.getProterty('displacementValue');
-
-        console.log(uniformValues);
 
         // upload the uniform values to the uniform buffer
         device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
