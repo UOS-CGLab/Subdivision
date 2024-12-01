@@ -32,7 +32,6 @@ In topology.json, data of each object is stored in the following structure:
 ```
 
 ### Buffers
-사용되는 buffer는 다음과 같다
 
 #### buffers.js.의 createBufferData()로 생성되는 buffer
 - vertex_Buffer_F : subdivition시 새로 생성되는 face point index
@@ -78,11 +77,11 @@ In topology.json, data of each object is stored in the following structure:
 
 ## Render
 
-Our rendering process is divided into 4 main steps:
+Our rendering process is divided into 3 main steps:
 
 1. [Subdivision](#subdivision)
-3. [Draw ordinary points](#draw-ordinary-points)
-4. [Draw limit points](#draw-limit-points)
+2. [Draw ordinary points](#draw-ordinary-points)
+3. [Draw limit points](#draw-limit-points)
 
 
 
@@ -194,8 +193,7 @@ Following is wgsl codes of each compute shader module in function createPipeline
         `
     });
 ```
-각각의 compute shader는 patch를 draw 하기 전에 make_compute_encoder()을 통해 활성화되어, 현재 depth만큼 subdivision을 수행해 새로운 vertex들의 position을 계산하고 Base_Vertex_Buffer에 저장한다.
-
+These shaders are activated using the make_compute_encoder() function, which performs subdivision to the current depth, calculating new vertex positions and storing them in the Base_Vertex_Buffer.
 ```javascript
 function make_compute_encoder(device, pipeline, bindgroup, workgroupsize, text = " ") {
     const encoder = device.createCommandEncoder({label: text});
@@ -208,12 +206,10 @@ function make_compute_encoder(device, pipeline, bindgroup, workgroupsize, text =
     device.queue.submit([commandBuffer]);
 }
 ```
-이후에 ordinary points는 B-spline patch를 이용해 렌더링된다.
+Subsequently, ordinary points are rendered using a B-spline patch.
 
 #### Extra-ordinary points
-Ordinary points의 subdivition 된 후 위치를 계산한 후에, Extra-ordinary points의 position을 계산한다.
-각각의 Extra-ordinary points는 각각의 limits position을 계산한 후 그 위치로 이동된다.
-아래는 pipeline.js의 createPipelines() 함수 안에 정의된 limit position을 계산하는 compute shader의 wgsl 코드이다.
+After calculating the positions of subdivided ordinary points, the positions of extra-ordinary points are calculated. Each extra-ordinary point is adjusted to its limit position. Below is the WGSL code for the compute shader that calculates limit positions, defined within the createPipelines() function in pipelines.js.
 
 ``` javascript
     const module_Limit = device.createShaderModule({
@@ -266,9 +262,9 @@ Ordinary points의 subdivition 된 후 위치를 계산한 후에, Extra-ordinar
 
 ### Draw ordinary points(patch)
 
-For the ordinary points, we use b-spline patch to draw. Patch with same subdivision level and same texture part have no problem to draw. But when we draw patches with different subdivision level or different texture part, we need to do some extra work.
+To draw ordinary points, we use B-spline patches. Patches with the same subdivision level and texture part can be drawn without issue. However, for patches with differing subdivision levels or texture parts, additional steps are required.
 
-For the patches with different subdivision level, we use tessellation to draw.
+For patches with different subdivision levels, tessellation is used. Below is the code that generates texcoord and index data for tessellation.
 
 This is the code to generate the texcoord and index data for the tessellation:
 ```javascript
@@ -303,11 +299,14 @@ for (let i = 0; i <= depth; i++) {
     index_byteLengths.push(index_byteLength);
 }
 ```
-For example if max depth is 5, and the subdivision level of patch is 3, patch will be divided as following image.
+
+
+
+For example if max depth is 5, and the subdivision level of patch is 3, patch will be divided as following image:
 
 <img src="./imgs/tesselation.png" alt="Description" width="300">
 
-위에서 만들어진 데이터는 각각 해당하는 depth의 vertexBuffers와 indexBuffers에 저장된다. 그 후 drawIndexed(m, n)가 호출되어 n개의 patch를 m개의 vertex로 draw한다. 
+Each depth's tessellation data is stored in vertexBuffers and indexBuffers. The drawIndexed() function is then called to draw the patches.
 
 
 ``` javascript
@@ -327,9 +326,6 @@ For example if max depth is 5, and the subdivision level of patch is 3, patch wi
 ```
 
 <img src="./imgs/patch1_1.png" alt="Description" width="300"><img src="./imgs/patch1_16.png" alt="Description" width="300">
-
-각각의 patch는 서로 다른 좌표에 draw되어야한다. 해당 데이터는 patch.txt에 저장되어 있고 storagebuffer로 사용한다.
-patch의 vertex position들은 cubic b-spline으로 연산된다.
 
 <img src="./imgs/patch4_1.png" alt="Description" width="300"><img src="./imgs/patch4_64.png" alt="Description" width="300">
 
@@ -425,25 +421,20 @@ patch의 vertex position들은 cubic b-spline으로 연산된다.
 
 <img src="./imgs/draw_monsterfrog.png" alt="Description" width="300">
 
-### Draw limit points
+### Draw limit points(작성중)
 
-## Real Time Animation
+## Real Time Animation (작성중)
  
 ## Texture Mapping
 
 ### How to use texture and apply displacement mapping?
 
-displacement mapping은 vertex의 position을 보다 사실적인 위치로 옮기는데 의미가 있다.
-즉, vetex shader에서 texture 값을 적용시켜야 한다. 이 texture 값은 WebGPU의 textureLoad함수 또는 textureSample함수를 이용해 알아낼 수 있다.
-* textureLoad : 해당 vertex에서만 texture가 적용된다
-* textureSample : fragment shader에서만 사용 가능하며, vertex 사이의 fragment에서 모두 적용된다
+Displacement mapping adjusts the vertex positions for realistic rendering. It modifies vertex positions based on texture values. In this project, we use textureLoad() in the vertex shader to apply displacement mapping.
 
-displacement mapping은 texture의 값이 vertex의 position에 직접적인 영향을 미치기 때문에, vetex의 position 변경을 위하여 본 프로젝트에서는 vertex shader에서 사용할 수 있는 textureLoad를 사용했다.
+For proper displacement mapping, dense vertices created via subdivision and tessellation are required.
 
-webgpu에서의 displacement mapping을 하기 위해서는 subdivision, tesselation 등으로 vertex를 촘촘하게 만들어야 texture 잘 적용된다.
-
-### regular B-spline patch의 경우
-regular B-spline patch에서 displacement mapping을 하기 위해서는 patch를 구성하는 16개의 점들 중, 안쪽의 4개 점들의 texture uv값을 이용한다. 이 값은 사전에 미리 처리되어 patch.txt에 저장되어 있어, 각 패치에 해당하는 vertex의 uv값을 가져올 수 있다.
+### Displacement Mapping Example in B-Spline Patches:
+To perform displacement mapping in a regular B-spline patch, the UV values of the 4 inner points among the 16 points comprising the patch are used. These values are preprocessed and stored in patch.txt, allowing the UV values for each vertex in the patch to be retrieved.
 
 <img src="./imgs/patch_texture_uv.png" alt="Description" width="300">
 
@@ -462,14 +453,16 @@ regular B-spline patch에서 displacement mapping을 하기 위해서는 patch�
 
 <img src="./imgs/monsterfrog_with_displacement.png" alt="Description" width="300">
 
-### 텍스처 심에서 생기는 크랙
+### Cracks at Texture Seams
 
 <img src="./imgs/crack.png" alt="Description" width="300">
 
 
-그러나 서로 다른 texture가 맞닿는 texture seam의 경우, 하나의 vertex가 여러 uv값을 가질 수 있다. </br>
-이 경우 서로 맞닿는 patch 경계에서 다른 uv값으로 texture에 접근해 textureLoad로 나온 값의 미세한 차이로 인해 crack이 발생한다. </br>
-이를 보완하기 위해서 patch에서 정보를 가져올 때 기존의 4개의 uv값만이 아닌 아래 그림과 같이 16개의 uv값을 가져온다. 
+Problem:
+When textures meet at seams, vertices may have multiple UV values. This can result in cracks due to small differences in textureLoad values.
+
+Solution:
+To mitigate this, instead of using 4 UV values for the patch, we use 16 UV values for more accurate texture data at boundaries.
 
 <img src="./imgs/patch_texture_uv_all.png" alt="Description" width="300">
 
@@ -479,12 +472,10 @@ regular B-spline patch에서 displacement mapping을 하기 위해서는 patch�
 ...
 ```
 
-이렇게 가져온 uv를 경계에서 통일 시키기 위해, 
-tesselation 적용 후의 vertex를 3가지 case에 나누어서 작업하였다.
+To unify the retrieved UVs at the boundaries, the vertices after tessellation were categorized into three cases and processed accordingly.
 
-### case 1 : patch 4개가 맞닿는 vertex 
-
-각 uv에서 textureLoad를 적용시킨 값을 4로 나눈 평균값을 적용한다.
+### Case 1: Vertex Shared by Four Patches
+The texture values obtained using textureLoad for each UV are averaged by dividing the sum of the values by 4.
 
 <img src="./imgs/case1.png" alt="Description" width="300">
 
@@ -508,9 +499,8 @@ tesselation 적용 후의 vertex를 3가지 case에 나누어서 작업하였다
             }
 ```
 
-### case 2: patch 2개가 맞닿는 vertex
-
-선의 끝과 끝인 두 vertex의 uv를 내분한 뒤, 각각 uv값에 대하여 textrueLoad한 후 texture값의 평균값을 적용한다
+### Case 2: Vertex Shared by Two Patches
+The UV values at the two endpoints of the edge are interpolated, and the textureLoad values for each UV are averaged.
 
 <img src="./imgs/case2.png" alt="Description" width="300">
 
@@ -530,9 +520,8 @@ tesselation 적용 후의 vertex를 3가지 case에 나누어서 작업하였다
             }
 ```
 
-### case 3 : patch 안에 포함된 vertex 
-
-다른 patch와 맞닿지 않는 vertex이므로, 기존의 uv값에 그대로 textureLoad를 적용한다.
+### Case 3: Vertex Contained Within a Patch
+For vertices that are not shared with other patches, the textureLoad is applied directly using the existing UV values.
 
 ```javascript
             else
