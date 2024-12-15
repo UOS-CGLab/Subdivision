@@ -2,7 +2,7 @@ import { mat4 } from './src/mat4.js';
 import { fpsAverage, jsAverage, gpuAverage } from './src/RollingAverage.js';
 import { initializeWebGPU, fetchData } from './src/initializeWebGPU.js';
 import { initializeScene } from './src/gui.js';
-import { createBindGroup_PatchTexture, createBindGroup, changedBindGroup, extraBindGroup, createBindGroup_Limit } from './src/createBindGroups.js';
+import { createBindGroup, changedBindGroup, extraBindGroup, createBindGroup_Limit } from './src/createBindGroups.js';
 import { createPipelines } from './src/pipelines.js';
 import { Camera, mouse_move, addkeyboardEvent} from './src/camera.js';
 
@@ -29,7 +29,7 @@ async function main() {
     let narray = [1, 1, 1, 1, 1, 1, 1, 1];
     let pipelineValue = 1;
 
-    let { uniformBuffer, uniformValues, matrixValue, viewValue, timeValue, wireValue, displacementValue } = uniform_buffers(device);
+    let { uniformBuffer, uniformValues, matrixValue, viewValue, timeValue, wireValue, displacementValue, colorValue } = uniform_buffers(device);
 
     let { 
         levels,
@@ -45,7 +45,7 @@ async function main() {
         Base_Vertex_Buffer,
         Base_Normal_Buffer,
         OrdinaryPointData,
-        texture,
+        textures,
         sampler,
         limit_Buffers,
         Base_Vertex_After_Buffer,
@@ -124,7 +124,7 @@ async function main() {
 
     const { pipeline_Face, pipeline_Edge, pipeline_Vertex, pipelines, pipeline2, pipelineAnime, pipeline_Limit } = await createPipelines(device, presentationFormat);
     
-    const { fixedBindGroups, animeBindGroup, changedBindGroups } = await changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer, Base_Normal_Buffer, texture, sampler, textureBuffer, connectivityStorageBuffers, base_UVStorageBuffers, pipelines, pipelineAnime, depth);
+    const { fixedBindGroups, animeBindGroup, changedBindGroups } = await changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer, Base_Normal_Buffer, textures, sampler, textureBuffer, connectivityStorageBuffers, base_UVStorageBuffers, pipelines, pipelineAnime, depth);
     
     let bindGroups = [];
     for (let i=0; i<=depth; i++){
@@ -167,12 +167,20 @@ async function main() {
 
         camera.update();
         mat4.multiply(camera.getProjectionMatrix(), camera.getViewMatrix(), matrixValue);
-
+        
         keyValue = settings.getProterty('moveSpeed');
-        viewValue[0] = 0; viewValue[1] = 0; viewValue[2] = -50; viewValue[3] = 1;
+        viewValue[0] = camera.position[0]; viewValue[1] = camera.position[1]; viewValue[2] = camera.position[2]; viewValue[3] = 1;
         timeValue[0] = now;
         wireValue[0] = settings.getProterty('wireAdjust');
         displacementValue[0] = settings.getProterty('displacementValue');
+        switch(settings.getProterty('color'))
+        {
+            case 'position': { colorValue[0] = 0; break; }
+            case 'normal': { colorValue[0] = 1; break; }
+            case 'level': { colorValue[0] = 2; break; }
+            case 'displacement_texture': { colorValue[0] = 4; break; }
+            case 'normal_texture': { colorValue[0] = 8; break; }
+        }
 
         // upload the uniform values to the uniform buffer
         device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
@@ -253,7 +261,7 @@ async function main() {
         //     make_render_encoder(device, renderPassDescriptor, pipelines[pipelineValue], changedBindGroups[i+(depth+1)*pipelineValue], vertexBuffers[N][i], indexBuffers[N][i], narray[i] * narray[i] * 6, 'render pipeline encoder');
         // }
 
-        const OrdinaryPointfixedBindGroup = await extraBindGroup(device, uniformBuffer, OrdinaryPointData, Base_Vertex_After_Buffer, Base_Normal_Buffer, texture, sampler, extra_base_UVStorageBuffers, extra_vertex_offsetStorageBuffers, pipeline2, depth, settings)
+        const OrdinaryPointfixedBindGroup = await extraBindGroup(device, uniformBuffer, OrdinaryPointData, Base_Vertex_After_Buffer, Base_Normal_Buffer, textures, sampler, extra_base_UVStorageBuffers, extra_vertex_offsetStorageBuffers, pipeline2, depth, settings)
 
         encoder = device.createCommandEncoder({ label : 'ordinary buffer encoder',});
         encoder.copyBufferToBuffer(Base_Vertex_Buffer, 0, OrdinaryBuffer, 0, Base_Vertex_Buffer.size);
