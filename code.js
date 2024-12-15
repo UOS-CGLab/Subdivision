@@ -19,7 +19,7 @@ async function main() {
     canvas, keyValue = mouse_move(canvas, camera);
     addkeyboardEvent(camera)
 
-    let settings = initializeScene();
+    let { settings, lightPosition } = initializeScene(camera);
 
     let then = 0;
     let depthTexture;
@@ -169,7 +169,21 @@ async function main() {
         mat4.multiply(camera.getProjectionMatrix(), camera.getViewMatrix(), matrixValue);
         
         keyValue = settings.getProterty('moveSpeed');
-        viewValue[0] = camera.position[0]; viewValue[1] = camera.position[1]; viewValue[2] = camera.position[2]; viewValue[3] = 1;
+        if(lightPosition.getProterty('lightIsView') == true)
+        {
+            viewValue[0] = camera.position[0]; 
+            lightPosition.setProterty('positionX', camera.position[0]);
+            viewValue[1] = camera.position[1]; 
+            lightPosition.setProterty('positionY', camera.position[1]);
+            viewValue[2] = camera.position[2]; 
+            lightPosition.setProterty('positionZ', camera.position[2]);
+            viewValue[3] = 1;
+        }
+        else
+        {
+            viewValue[0] = lightPosition.getProterty('positionX'); viewValue[1] = lightPosition.getProterty('positionY'); 
+            viewValue[2] = lightPosition.getProterty('positionZ'); viewValue[3] = 1;
+        }
         timeValue[0] = now;
         wireValue[0] = settings.getProterty('wireAdjust');
         displacementValue[0] = settings.getProterty('displacementValue');
@@ -181,6 +195,9 @@ async function main() {
             case 'displacement_texture': { colorValue[0] = 4; break; }
             case 'normal_texture': { colorValue[0] = 8; break; }
         }
+        if(lightPosition.getProterty('lightActive') == true)
+            colorValue[1] = 1;
+        else colorValue[1] = 0;
 
         // upload the uniform values to the uniform buffer
         device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
