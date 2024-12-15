@@ -568,16 +568,21 @@ export async function createPipelines(device, presentationFormat) {
             let g1 = pos2[  conn[instanceIndex*16+ 6]  ].xyz;
             let g2 = pos2[  conn[instanceIndex*16+ 9]  ].xyz;
             let g3 = pos2[  conn[instanceIndex*16+10]  ].xyz;
-            let view = normalize(  uni.view.xyz - p  );
-            let temp_light = dot(view, normal)*0.5;
             vsOut.color = color.value;
-            vsOut.color += color.value * vec4f(temp_light, temp_light, temp_light, 1)  ;
-            vsOut.position2 += vec3f(normalize(p.xyz)) * vec3f(temp_light, temp_light, temp_light)  ;
-            if(dot(view, normal) > 0)
+            if(uni.color.y == 1)
             {
-                let highlight = vec3f((pow(dot(view, normal), 100)*0.2), (pow(dot(view, normal), 100)*0.2), (pow(dot(view, normal), 100)*0.2));
-                vsOut.color += vec4f(highlight, 1);
-                vsOut.position2 += highlight;
+                let view = normalize(  uni.view.xyz - p  );
+                let temp_light = dot(view, normal)*0.5;
+                vsOut.color += color.value * vec4f(temp_light, temp_light, temp_light, 1)  ;
+                vsOut.position2 += vec3f(normalize(p.xyz)) * temp_light  ;
+                vsOut.normal += normal * temp_light;
+                if(dot(view, normal) > 0)
+                {
+                    let highlight = vec3f((pow(dot(view, normal), 100)*0.2), (pow(dot(view, normal), 100)*0.2), (pow(dot(view, normal), 100)*0.2));
+                    vsOut.color += vec4f(highlight, 1);
+                    vsOut.position2 += highlight;
+                    vsOut.normal += highlight;
+                }
             }
 
             var wire = uni.wireAdjust.x;
@@ -690,10 +695,6 @@ export async function createPipelines(device, presentationFormat) {
             // let p = vert.position.xyz;
             let p = vec3f(base_vertex[extra_index_storage_buffer[vertexIndex]].xyz);
             var normal = -base_normal[extra_index_storage_buffer[vertexIndex]].xyz;
-            // if(normal.x == 0)
-            // {
-            //     normal = vec3f(normalize(p.xyz));
-            // }
             
             // vsOut.position = uni.matrix * vec4f(p*5, 1);
             if(textureValue-0.5 < 0)
@@ -708,17 +709,28 @@ export async function createPipelines(device, presentationFormat) {
             }
 
             vsOut.position2 = vec3f(normalize(p.xyz));
+            if(normal.x == 0)
+            {
+                normal = -normalize( cross( base_vertex[extra_index_storage_buffer[vertexIndex]].xyz - base_vertex[extra_index_storage_buffer[vertexIndex-1]].xyz ,
+                                            base_vertex[extra_index_storage_buffer[vertexIndex]].xyz - base_vertex[extra_index_storage_buffer[vertexIndex-2]].xyz));
+                // normal = -base_normal[extra_index_storage_buffer[vertexIndex-1]].xyz;
+            }
             vsOut.normal = normal;
             vsOut.color = vec4f(0.5, 0, 0, 1);
-            let view = normalize(  uni.view.xyz - p  );
-            let temp_light = dot(view, normal)*0.5;
-            vsOut.color += vec4f(0.5, 0, 0, 1) * vec4f(temp_light, temp_light, temp_light, 1)  ;
-            vsOut.position2 += vec3f(normalize(p.xyz)) * temp_light  ;
-            if(dot(view, normal) > 0)
+            if(uni.color.y == 1)
             {
-                let highlight = vec3f((pow(dot(view, normal), 100)*0.2), (pow(dot(view, normal), 100)*0.2), (pow(dot(view, normal), 100)*0.2));
-                vsOut.color += vec4f(highlight, 1);
-                vsOut.position2 += highlight;
+                let view = normalize(  uni.view.xyz - p  );
+                let temp_light = dot(view, normal)*0.5;
+                vsOut.color += vec4f(0.5, 0, 0, 1) * vec4f(temp_light, temp_light, temp_light, 1)  ;
+                vsOut.position2 += vec3f(normalize(p.xyz)) * temp_light  ;
+                vsOut.normal += normal * temp_light ;
+                if(dot(view, normal) > 0)
+                {
+                    let highlight = vec3f((pow(dot(view, normal), 100)*0.2), (pow(dot(view, normal), 100)*0.2), (pow(dot(view, normal), 100)*0.2));
+                    vsOut.color += vec4f(highlight, 1);
+                    vsOut.position2 += highlight;
+                    vsOut.normal += highlight  ;
+                }
             }
             return vsOut;
         }
@@ -732,7 +744,7 @@ export async function createPipelines(device, presentationFormat) {
             // return vec4f(vsOut.texcoord1.x*5 -2.5, vsOut.texcoord1.x*5 -2.5, vsOut.texcoord1.x*5 -2.5, 1);
             
             if(uni.color.x == 0) { return vec4f(vsOut.position2.xyz, 1); }
-            else if(uni.color.x == 1) { return vec4f(normalize(vsOut.normal.xyz), 1); }
+            else if(uni.color.x == 1) { return vec4f(vsOut.normal.xyz, 1); }
             else if(uni.color.x == 4) { return vec4f(vsOut.texcoord1.x*5 -2.5, vsOut.texcoord1.x*5 -2.5, vsOut.texcoord1.x*5 -2.5, 1); }
             else { return vsOut.color; }
         }

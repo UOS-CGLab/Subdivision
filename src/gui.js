@@ -75,14 +75,92 @@ export class Settings {
     }
 }
 
-export function initializeScene() {
+export class LightPosition {
+    constructor(camera) {
+        this.camera = camera;
+        this.lightPosition = {
+            lightActive: false,
+            lightIsView: false,
+            positionX: 0,
+            positionY: 0,
+            positionZ: 0,
+        };
+        this.guiControllers = {};
+    }
+
+    addGui(gui) {
+        this.guiControllers.lightActive = gui.add(this.lightPosition, 'lightActive').name('lightActive');
+        this.guiControllers.lightIsView = gui.add(this.lightPosition, 'lightIsView').name('lightIsView');
+        this.guiControllers.positionX = gui.add(this.lightPosition, 'positionX', -100, 100).name('Position X');
+        this.guiControllers.positionY = gui.add(this.lightPosition, 'positionY', -100, 100).name('Position Y');
+        this.guiControllers.positionZ = gui.add(this.lightPosition, 'positionZ', -100, 100).name('Position Z');
+    }
+
+    getProterty(name) {
+        switch (name) {
+            case 'lightActive':
+                return this.lightPosition.lightActive;
+            case 'lightIsView':
+                return this.lightPosition.lightIsView;
+            case 'positionX':
+                return this.lightPosition.positionX;
+            case 'positionY':
+                return this.lightPosition.positionY;
+            case 'positionZ':
+                return this.lightPosition.positionZ;
+            default:
+                return null;
+        }
+    }
+
+    setProterty(name, value) {
+        if (this.lightPosition.hasOwnProperty(name)) {
+            this.lightPosition[name] = value;
+            if (this.guiControllers[name]) {
+                this.guiControllers[name].setValue(value);
+            }
+        }
+    }
+
+    // updateFromCamera() {
+    //     if (!this.camera) return;
+    //     console.log(this.camera.position.x);
+
+    //     this.lightPosition.positionX = this.camera.position.x;
+    //     this.lightPosition.positionY = this.camera.position.y;
+    //     this.lightPosition.positionZ = this.camera.position.z;
+
+    //     this.guiControllers.positionX.setValue(this.lightPosition.positionX);
+    //     this.guiControllers.positionY.setValue(this.lightPosition.positionY);
+    //     this.guiControllers.positionZ.setValue(this.lightPosition.positionZ);
+    // }
+    
+    // animate() {
+    //     if(this.lightPosition.lightIsView && this.lightPosition.lightActive)
+    //     {
+    //         this.updateFromCamera();
+    //         requestAnimationFrame(this.animate.bind(this));
+    //     }
+    // }
+}
+
+export function initializeScene(camera) {
     let gui = new dat.GUI();
-    guiStyles();
 
+    let settingsFolder = gui.addFolder('Settings');
     let settings = new Settings();
-    settings.addGui(gui);
+    settings.addGui(settingsFolder);
 
-    return settings;
+    let lightFolder = gui.addFolder('Light Position');
+    let lightPosition = new LightPosition(camera);
+    lightPosition.addGui(lightFolder);
+
+    settingsFolder.open();
+    lightFolder.open();
+
+    return {
+        settings, lightPosition,
+    }
 }
 
 function guiStyles() {
