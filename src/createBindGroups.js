@@ -1,24 +1,3 @@
-export function createBindGroup_PatchTexture(device, depth, pipeline_PatchTexture, connectivityStorageBuffers, base_UVStorageBuffers,
-                                            textureBuffer, texture) {
-    let bindGroups_PatchTexture = [];
-    for(let i=0; i<=depth; i++)
-    {
-        const bindGroup_PatchTexture = device.createBindGroup({
-            label: `bindGroup for PatchTexture`,
-            layout: pipeline_PatchTexture.getBindGroupLayout(0),
-            entries: [
-                { binding: 0, resource: { buffer: connectivityStorageBuffers[i] } },
-                { binding: 1, resource: { buffer: base_UVStorageBuffers[i] } },
-                { binding: 2, resource: { buffer: textureBuffer } },
-                { binding: 3, resource: texture.createView() },
-            ],
-        });
-        bindGroups_PatchTexture.push(bindGroup_PatchTexture);
-    }
-
-    return bindGroups_PatchTexture;
-}
-
 export function createBindGroup(device, pipeline_Face, pipeline_Edge, pipeline_Vertex, Base_Vertex_Buffer, buffers, prefix) {
     const bindGroup_Face = device.createBindGroup({
         label: `bindGroup for face${prefix}`,
@@ -62,7 +41,7 @@ export function createBindGroup(device, pipeline_Face, pipeline_Edge, pipeline_V
     };
 }
 
-export async function changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer, Base_Normal_Buffer, texture, sampler, textureBuffer,
+export async function changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer, Base_Normal_Buffer, textures, sampler, textureBuffer,
     connectivityStorageBuffers, base_UVStorageBuffers, pipelines, pipelineAnime, depth)
 {
     const color0 = new Float32Array([0.5, 0.5, 0.5, 1, 0, 0, 0, 0]);
@@ -106,7 +85,7 @@ export async function changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer
                 { binding: 0, resource: { buffer: uniformBuffer } },
                 { binding: 1, resource: { buffer: Base_Vertex_Buffer } },
                 { binding: 2, resource: { buffer: Base_Normal_Buffer } },
-                { binding: 3, resource: texture.createView() },
+                { binding: 3, resource: textures[0].createView() },
                 { binding: 4, resource: sampler },
                 { binding: 5, resource: { buffer: textureBuffer } },
             ],
@@ -133,7 +112,7 @@ export async function changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer
 
 }
 
-export async function extraBindGroup(device, uniformBuffer, OrdinaryPointData, Base_Vertex_After_Buffer, Base_Normal_Buffer, texture, sampler,
+export async function extraBindGroup(device, uniformBuffer, OrdinaryPointData, Base_Vertex_After_Buffer, Base_Normal_Buffer, textures, sampler,
     extra_base_UVStorageBuffers, extra_vertex_offsetStorageBuffers, pipeline2, depth, settings)
 {
     let OrdinaryPointBuffers = [];
@@ -162,7 +141,7 @@ export async function extraBindGroup(device, uniformBuffer, OrdinaryPointData, B
             { binding: 1, resource: { buffer: OrdinaryStorageBuffers[settings.getProterty('ordinaryLevel')] } },
             { binding: 2, resource: { buffer: extra_base_UVStorageBuffers[settings.getProterty('ordinaryLevel')] } },
             { binding: 3, resource: { buffer: extra_vertex_offsetStorageBuffers[settings.getProterty('ordinaryLevel')] } },
-            { binding: 4, resource: texture.createView() },
+            { binding: 4, resource: textures[0].createView() },
             { binding: 5, resource: sampler },
             { binding: 6, resource: { buffer: Base_Vertex_After_Buffer } },
             { binding: 7, resource: { buffer: Base_Normal_Buffer } },

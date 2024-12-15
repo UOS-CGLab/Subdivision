@@ -3,23 +3,25 @@ import * as dat from '../node_modules/dat.gui/build/dat.gui.module.js';
 export class Settings {
     constructor() {
         this.settings = {
-            renderingMode: 'solid',
-            object: 'suzanne',
+            // renderingMode: 'solid',
+            // object: 'suzanne',
             pipelineSetting: 'F',
+            color: 'normal',
             tesselation: 3,
             ordinaryLevel: 3,
             draw: [true, true, true, true, false, true, true, true],
             moveSpeed: 1,
-            wireAdjust: 0.01,
+            wireAdjust: 0,
             displacementValue: 30,
             animation: false,
         };
     }
 
     addGui(gui) {
-        gui.add(this.settings, 'renderingMode', ['solid', 'wireframe', 'points']).name('renderingMode')// .onChange((name, value) => this.onRadioChange('renderingMode', value));
-        gui.add(this.settings, 'object', ['suzanne', 'monsterfrog', 'bunny', 'dragon', 'cube', 'sphere']).name('object')
+        // gui.add(this.settings, 'renderingMode', ['solid', 'wireframe', 'points']).name('renderingMode')// .onChange((name, value) => this.onRadioChange('renderingMode', value));
+        // gui.add(this.settings, 'object', ['suzanne', 'monsterfrog', 'bunny', 'dragon', 'cube', 'sphere']).name('object')
         gui.add(this.settings, 'pipelineSetting', ['V', 'L', 'F']).name('Pipeline V or L or F')// .onChange((name, value) => this.onRadioChange('pipelineSetting', value));
+        gui.add(this.settings, 'color', ['position', 'normal', 'level', 'displacement_texture']).name('Color')// .onChange((name, value) => this.onRadioChange('pipelineSetting', value));
         gui.add(this.settings, 'tesselation', 0, 7, 1).name('tesselation').step(1)// .onChange((name, value) => this.onSliderChange('tesselation', value));
         gui.add(this.settings, 'ordinaryLevel', 0, 4, 1).name('ordinaryLevel').step(1)// .onChange((name, value) => this.onSliderChange('ordinaryLevel', value));
 
@@ -51,6 +53,8 @@ export class Settings {
                 return this.settings.renderingMode;
             case 'pipelineSetting':
                 return this.settings.pipelineSetting;
+            case 'color':
+                return this.settings.color;
             case 'tesselation':
                 return this.settings.tesselation;
             case 'ordinaryLevel':

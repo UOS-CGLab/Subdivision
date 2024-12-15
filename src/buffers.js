@@ -235,9 +235,30 @@ function create_texture_buffers(device, depth)
     return { indices, texcoordDatas, indexBuffers, vertexBuffers }
 }
 
+async function create_image_texture_buffers(path, device)
+{
+    const img = document.createElement('img');
+    img.src = path;
+    await img.decode();
+    const imageBitmap = await createImageBitmap(img);
+
+    let texture = device.createTexture({
+        size: [imageBitmap.width, imageBitmap.height, 1],
+        format: 'rgba8unorm',
+        usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+    device.queue.copyExternalImageToTexture(
+        { source: imageBitmap },
+        { texture: texture },
+        [imageBitmap.width, imageBitmap.height, 1]
+    );
+
+    return texture;
+}
+
 export function uniform_buffers(device)
 {
-    const uniformBufferSize = (32) * 4;
+    const uniformBufferSize = (36) * 4;
     let uniformBuffer = device.createBuffer({
         label: 'uniforms',
         size: uniformBufferSize,
@@ -251,19 +272,21 @@ export function uniform_buffers(device)
     const timeOffset = 20;
     const wireOffset = 24;
     const displacementOffset = 28;
+    const colorOffset = 32;
 
     const matrixValue = uniformValues.subarray(kMatrixOffset, kMatrixOffset + 16);
     const viewValue = uniformValues.subarray(viewOffset, viewOffset + 4);
     const timeValue = uniformValues.subarray(timeOffset, timeOffset + 4);
     const wireValue = uniformValues.subarray(wireOffset, wireOffset + 4);
     const displacementValue = uniformValues.subarray(displacementOffset, displacementOffset + 4);
+    const colorValue = uniformValues.subarray(colorOffset, colorOffset + 4);
 
     
 
 
 
 
-    return { uniformBuffer, uniformValues, matrixValue, viewValue, timeValue, wireValue, displacementValue };
+    return { uniformBuffer, uniformValues, matrixValue, viewValue, timeValue, wireValue, displacementValue, colorValue };
 }
 
 export async function buffers(device, depth, obj, limit, myString){
@@ -323,21 +346,9 @@ export async function buffers(device, depth, obj, limit, myString){
         usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
     });
 
-    const img = document.createElement('img');
-    img.src = './'+myString+'/d512.bmp';
-    await img.decode();
-    const imageBitmap = await createImageBitmap(img);
-
-    let texture = device.createTexture({
-        size: [imageBitmap.width, imageBitmap.height, 1],
-        format: 'rgba8unorm',
-        usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
-    });
-    device.queue.copyExternalImageToTexture(
-        { source: imageBitmap },
-        { texture: texture },
-        [imageBitmap.width, imageBitmap.height, 1]
-    );
+    let textures = [];
+    textures.push(await create_image_texture_buffers(`./${myString}/d512.bmp`, device));
+    textures.push(await create_image_texture_buffers(`./${myString}/n.bmp`, device));
 
     let { indices, texcoordDatas, indexBuffers, vertexBuffers } = create_texture_buffers(device, depth)
     
@@ -401,7 +412,7 @@ export async function buffers(device, depth, obj, limit, myString){
         Base_Vertex_Buffer,
         Base_Normal_Buffer,
         OrdinaryPointData,
-        texture,
+        textures,
         sampler,
         limit_Buffers,
         Base_Vertex_After_Buffer,
