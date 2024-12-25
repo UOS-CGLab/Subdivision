@@ -1,7 +1,20 @@
 ### 본 논문에서 해결하고자 하는 문제는 무엇인가?
-- Catmull-Clark subdivision surface에 displacement mapping을 적용하여 실시간 렌더링 구현
 
-- displacement mapping 적용시 texture seam에서 하나의 vertex가 여러 uv값을 가지고 있을 수 있기 때문에 crack이 발생
+- low polygon 모델을 더 부드럽게 하기 위해 Catmull-Clark subdivision, B-spline 기술들이 존재함.
+
+- 웹브라우저에서 low polygon 모델의 표면을 부드럽고 가볍게 동작하도록 하는 것이 목표.
+
+- 다만 B-spline 기술의 경우, 모델의 모든 face에 적용시킬 수 없음.
+
+- Catmull-Clark subdivision 기술의 경우, 모든 모델에 적용시킬 수 있으나 subdivision을 통해 나온 모델 데이터는 그 크기가 너무 크고 애니메이션에 너무 비효율적임. </br>
+
+- Catmull-Clark subdivision 연산을 적용시키고 나면, 모든 face가 사각형이 되며, B-spline을 적용할 수 있는 면적?(=모델을 구성하는)이 늘어남.
+
+- 따라서 본 논문에서는 real-time에서 low polygon 모델을 B-spline으로 rendering 하며, B-spline연산이 불가능한 경우 subdivision level을 높혀 더 부드러운 모델을 render할 수 있음.</br>
+  이때 subdivision 연산을 수행하는 face와 연산을 수행하지 않는 face는 기하학적으로 맞닿고 있어도 다른 edge와 vertex 좌표를 가지게 됨.</br>
+  이를 보완하기 위해 tessellation 연산을 추가함.
+  
+- (뒤로 뺄 예정)displacement mapping 적용시 texture seam에서 하나의 vertex가 여러 uv값을 가지고 있을 수 있기 때문에 crack이 발생
 
 
 ---
