@@ -543,20 +543,20 @@ export async function createPipelines(device, presentationFormat) {
             // let textureValue = f32(round(80*(pow(20, textureSampleLevel(object_texture, sampler0,texCoordInt, 0).x - 0.5)/4.5)))/80.0; // textureSampleLevel 뽑아내면 될듯
 
             // vsOut.position = uni.matrix * vec4f(p*5, 1);
-            if(textureValue-0.5 < 0)
-            {
-                vsOut.position = uni.matrix * vec4f(p*5, 1);
-            }
-            else
-            {
-                vsOut.position = uni.matrix * vec4f(p*5 + normal*(textureValue-0.5)*uni.displacementValue.x, 1);
-                // vsOut.position = uni.matrix * vec4f(p*5 + normal*20, 1);
-                // vsOut.position = uni.matrix * vec4f(p*5 + textureValue*20, 1);
-            }
+            // if(textureValue-0.5 < 0)
+            // {
+            //     vsOut.position = uni.matrix * vec4f(p*5, 1);
+            // }
+            // else
+            // {
+            //     vsOut.position = uni.matrix * vec4f(p*5 + normal*(textureValue-0.5)*uni.displacementValue.x, 1);
+            //     // vsOut.position = uni.matrix * vec4f(p*5 + normal*20, 1);
+            //     // vsOut.position = uni.matrix * vec4f(p*5 + textureValue*20, 1);
+            // }
             // vsOut.position = uni.matrix * vec4f(p*5 + textureValue*20, 1);
             // vsOut.position = uni.matrix * vec4f(p*5 + normal*2, 1);
 
-            // vsOut.position = uni.matrix * vec4f(p*5 + normal*(textureValue)*uni.displacementValue.x, 1);
+            vsOut.position = uni.matrix * vec4f(p*5 + normal*(textureValue-0.5)*uni.displacementValue.x, 1);
 
             vsOut.center = vec3f(vert.position.xy, 0);
             vsOut.position2 = vec3f(normalize(p.xyz));
@@ -611,6 +611,7 @@ export async function createPipelines(device, presentationFormat) {
             else if(uni.color.x == 4) { return vec4f(vsOut.texcoord1.x*5 -2.5, vsOut.texcoord1.x*5 -2.5, vsOut.texcoord1.x*5 -2.5, 1); }
             // return vec4f(temp.xyz*5 - 2.5, 1);
             // return vec4f(vsOut.texcoord1.x*5 -2.5, vsOut.texcoord1.x*5 -2.5, vsOut.texcoord1.x*5 -2.5, 1);
+            // return vec4f(vsOut.texcoord1.x, vsOut.texcoord1.x, vsOut.texcoord1.x, 1);
             else { return vec4f(vsOut.color); }
         }
         `,
@@ -697,16 +698,17 @@ export async function createPipelines(device, presentationFormat) {
             var normal = -base_normal[extra_index_storage_buffer[vertexIndex]].xyz;
             
             // vsOut.position = uni.matrix * vec4f(p*5, 1);
-            if(textureValue-0.5 < 0)
-            {
-                vsOut.position = uni.matrix * vec4f(p*5, 1);
-            }
-            else
-            {
-                vsOut.position = uni.matrix * vec4f(p*5 + normal*(textureValue-0.5)*uni.displacementValue.x, 1);
-                // vsOut.position = uni.matrix * vec4f(p*5 - normal*20, 1);
-                // vsOut.position = uni.matrix * vec4f(p*5 + textureValue*20, 1);
-            }
+            // if(textureValue-0.5 < 0)
+            // {
+            //     vsOut.position = uni.matrix * vec4f(p*5, 1);
+            // }
+            // else
+            // {
+            //     vsOut.position = uni.matrix * vec4f(p*5 + normal*(textureValue-0.5)*uni.displacementValue.x, 1);
+            //     // vsOut.position = uni.matrix * vec4f(p*5 - normal*20, 1);
+            //     // vsOut.position = uni.matrix * vec4f(p*5 + textureValue*20, 1);
+            // }
+            vsOut.position = uni.matrix * vec4f(p*5 + normal*(textureValue-0.5)*uni.displacementValue.x, 1);
 
             vsOut.position2 = vec3f(normalize(p.xyz));
             if(normal.x == 0)

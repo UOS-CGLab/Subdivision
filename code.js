@@ -9,7 +9,7 @@ import { Camera, mouse_move, addkeyboardEvent} from './src/camera.js';
 import { uniform_buffers, buffers} from './src/buffers.js';
 
 const myString = "monsterfrog";
-const depth = 4;
+const depth = 6;
 
 async function main() {
     let { canvas, device, context, presentationFormat, canTimestamp } = await initializeWebGPU();
@@ -260,7 +260,11 @@ async function main() {
             if(settings.getProterty('draw')[i] == true) {
                 let j = i;
                 if (i > 4); j = 4;
-                // pass.drawIndexed(narray[i] * narray[i] * 6,  4);
+                // pass.drawIndexed(narray[i] * narray[i] * 6,  289);
+                // patch1 120,              0.377045, 0.457611(위)    0.414398, 0.437653(아래) 0.400390625
+                //                          0.377044, 0.457611(위)로 가정.                     0.40039025
+                //                                                                      오차: 0.000000395
+                // patch2 528+289=817(818), 0.395721, 0.447632(위)    0.414398, 0.437653(아래) 0.40039025
                 pass.drawIndexed(narray[i] * narray[i] * 6,  j * 2 * 1000 + 100000);
             }
         }
