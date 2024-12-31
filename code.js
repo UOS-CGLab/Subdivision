@@ -138,7 +138,7 @@ async function main() {
 
         const startTime = performance.now();
 
-        if(settings.getProterty('animation')){
+        if(settings.getProterty('animation')[0]){
             Base_Vertex = new Float32Array(animationBase['Base_Vertex'+String(parseInt(  now*100%100  )).padStart(2, '0')]); // animation speed
         }
 
@@ -202,7 +202,10 @@ async function main() {
         // upload the uniform values to the uniform buffer
         device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
 
-        make_compute_encoder(device, pipelineAnime, animeBindGroup, 65535, "base_vertex_buffer animation encoder");
+        if(settings.getProterty('animation')[1])
+        {
+            make_compute_encoder(device, pipelineAnime, animeBindGroup, 65535, "base_vertex_buffer animation encoder");
+        }
 
         for(let i=0; i<=depth; i++) // 등호 확인
         {
@@ -261,7 +264,7 @@ async function main() {
                 let j = i;
                 if (i > 4); j = 4;
                 // pass.drawIndexed(narray[i] * narray[i] * 6,  289);
-                // patch1 120,              0.377045, 0.457611(위)    0.414398, 0.437653(아래) 0.400390625
+                // patch1 120,              0.377045, 0.457611(위)    0.414398, 0.437653(아래) 0.400390625 
                 //                          0.377044, 0.457611(위)로 가정.                     0.40039025
                 //                                                                      오차: 0.000000395
                 // patch2 528+289=817(818), 0.395721, 0.447632(위)    0.414398, 0.437653(아래) 0.40039025
