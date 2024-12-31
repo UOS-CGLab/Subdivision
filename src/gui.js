@@ -13,7 +13,7 @@ export class Settings {
             moveSpeed: 1,
             wireAdjust: 0,
             displacementValue: 30,
-            animation: false,
+            animation: [false, false],
         };
     }
 
@@ -32,7 +32,8 @@ export class Settings {
         gui.add(this.settings, 'wireAdjust', 0, 0.1).name('wireAdjust')// .onChange((name, value) => this.onSliderChange('wireAdjust', value));
         gui.add(this.settings, 'displacementValue', 0, 100).name('displacementValue')// .onChange((name, value) => this.onSliderChange('displacementValue', value));
         gui.add(this.settings, 'moveSpeed', 0, 100).name('moveSpeed')// .onChange((name, value) => this.onSliderChange('moveSpeed', value));
-        gui.add(this.settings, 'animation').name('animation')// .onChange((name, value) => this.onSliderChange('moveSpeed', value));
+        gui.add(this.settings.animation, 0).name('bite animation')// .onChange((name, value) => this.onCheckboxChange('animation ' + (i + 1), value));
+        gui.add(this.settings.animation, 1).name('twist animation')// .onChange((name, value) => this.onCheckboxChange('animation ' + (i + 1), value));
     }
 
     onRadioChange(name, value) {

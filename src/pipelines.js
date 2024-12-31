@@ -218,50 +218,19 @@ export async function createPipelines(device, presentationFormat) {
             @location(4) texcoord: vec2f,
             @location(5) texcoord1: vec2f,
             @location(6) position2: vec3f,
+            @location(7) view: vec3f,
         };
 
         @group(0) @binding(0) var<uniform> uni: Uniforms;
         @group(0) @binding(1) var<storage, read> pos2: array<vec4f>;
         @group(0) @binding(2) var<storage, read> base_normal: array<vec4f>;
         @group(0) @binding(3) var object_texture: texture_2d<f32>;
-        @group(0) @binding(4) var sampler0: sampler;
-        @group(0) @binding(5) var<storage> textureBuffer: array<f32>;
+        @group(0) @binding(4) var object_normal_texture: texture_2d<f32>;
+        @group(0) @binding(5) var sampler0: sampler;
+        @group(0) @binding(6) var<storage> textureBuffer: array<f32>;
         @group(1) @binding(0) var<storage, read> conn: array<i32>;
         @group(1) @binding(1) var<storage, read> base_UV: array<vec2f>;
         @group(1) @binding(2) var<storage, read> color: Color;
-
-        // fn B0(t: f32) -> f32 {
-        //     var s = 1 - t;
-        //     return (1.0/6.0)*(s*s*s);
-        // }
-        // fn B0prime(t: f32) -> f32 {
-        //     var s = 1 - t;
-        //     return (1.0/6.0)*(-s*s);
-        // }
-        // fn B1(t: f32) -> f32 {
-        //     var s = 1 - t;
-        //     return (1.0/6.0)*( (4.0*s*s*s + t*t*t) + (12.0*s*t*s + 6.0*t*s*t) );
-        // }
-        // fn B1prime(t: f32) -> f32 {
-        //     var s = 1 - t;
-        //     return (1.0/6.0)*( -t*t -4.0*t*s );
-        // }
-        // fn B2(t: f32) -> f32 {
-        //     var s = 1 - t;
-        //     return (1.0/6.0)*( (4.0*t*t*t + s*s*s) + (12.0*t*s*t + 6.0*s*t*s) );
-        // }
-        // fn B2prime(t: f32) -> f32 {
-        //     var s = 1 - t;
-        //     return (1.0/6.0)*( s*s + 4.0*s*t );
-        // }
-        // fn B3(t: f32) -> f32 {
-        //     var s = 1 - t;
-        //     return (1.0/6.0)*(t*t*t);
-        // }
-        // fn B3prime(t: f32) -> f32 {
-        //     var s = 1 - t;
-        //     return (1.0/6.0)*t*t;
-        // }
 
         fn B0(t: f32) -> f32 {
             return (1.0/6.0)*(1.0-t)*(1.0-t)*(1.0-t);
@@ -314,6 +283,21 @@ export async function createPipelines(device, presentationFormat) {
         fn Sum_of_2value(a: f32, b:f32) -> f32 {
             // return max(a, b);
             return (a + b) / 2;
+        }
+
+        fn cotangent_frame(normal: vec3f, tangent: vec3f, bitangent: vec3f) -> mat3x3f {
+            return mat3x3f(tangent, bitangent, normal);
+        }
+        
+        fn perturb_normal(texture: texture_2d<f32>, sampler: sampler, normal: vec3f, uv: vec2f) -> vec3f {
+            let normal_map = getTexture(texture, sampler, uv, 0).xyz - vec3f(0.5);
+        
+            // TBN 매트릭스 계산
+            let tangent = normalize(dpdx(vec3f(uv, 0.0))); // Tangent (x축)
+            let bitangent = normalize(dpdy(vec3f(uv, 0.0))); // Bitangent (y축)
+            let TBN = cotangent_frame(normal, tangent, bitangent);
+        
+            return normalize(TBN * normal_map);
         }
 
         @vertex fn vs(
@@ -380,6 +364,7 @@ export async function createPipelines(device, presentationFormat) {
             _ = base_UV[ instanceIndex ];
             _ = textureBuffer[ instanceIndex ];
             _ = object_texture;
+            _ = object_normal_texture;
             _ = base_normal[0];
 
 
@@ -408,11 +393,6 @@ export async function createPipelines(device, presentationFormat) {
                 {
                     normal = -base_normal[  conn[instanceIndex*16+5]  ].xyz;
                 }
-
-                // textureValue = (base_UV[instanceIndex*16 +0].y
-                //             +   base_UV[instanceIndex*16 +1].y
-                //             +   base_UV[instanceIndex*16 +2].y
-                //             +   base_UV[instanceIndex*16 +3].y ) / 4;
             }
 
             else if(vert.position.x == 0.0 && vert.position.y == 1.0) // changed
@@ -428,11 +408,6 @@ export async function createPipelines(device, presentationFormat) {
                 {
                     normal = -base_normal[  conn[instanceIndex*16+6]  ].xyz;
                 }
-
-                // textureValue = (base_UV[instanceIndex*16 +4].y
-                //             +   base_UV[instanceIndex*16 +5].y
-                //             +   base_UV[instanceIndex*16 +6].y
-                //             +   base_UV[instanceIndex*16 +7].y ) / 4;
             }
 
             else if(vert.position.x == 1.0 && vert.position.y == 0.0) // changed
@@ -448,11 +423,6 @@ export async function createPipelines(device, presentationFormat) {
                 {
                     normal = -base_normal[  conn[instanceIndex*16+9]  ].xyz;
                 }
-
-                // textureValue = (base_UV[instanceIndex*16 +8].y
-                //             +   base_UV[instanceIndex*16 +9].y
-                //             +   base_UV[instanceIndex*16 +10].y
-                //             +   base_UV[instanceIndex*16 +11].y ) / 4;
             }
 
             else if(vert.position.x == 1.0 && vert.position.y == 1.0) // changed
@@ -468,11 +438,6 @@ export async function createPipelines(device, presentationFormat) {
                 {
                     normal = -base_normal[  conn[instanceIndex*16+10]  ].xyz;
                 }
-
-                // textureValue = (base_UV[instanceIndex*16 +12].y
-                //             +   base_UV[instanceIndex*16 +13].y
-                //             +   base_UV[instanceIndex*16 +14].y
-                //             +   base_UV[instanceIndex*16 +15].y ) / 4;
             }
     
             else if(vert.position.y == 0.0) // changed
@@ -485,9 +450,6 @@ export async function createPipelines(device, presentationFormat) {
                         vert.position.x, base_UV[instanceIndex*16 +  1], base_UV[instanceIndex*16 +  11]
                     ), 0).x,
                 );
-
-                // textureValue =((   (1-vert.position.x) * base_UV[instanceIndex*16 +  0] + vert.position.x * base_UV[instanceIndex*16 + 8] ).y
-                //             +  (   (1-vert.position.x) * base_UV[instanceIndex*16 +  1] + vert.position.x * base_UV[instanceIndex*16 + 11] ).y) / 2;
             }
             else if(vert.position.y == 1.0) // changed
             {
@@ -499,9 +461,6 @@ export async function createPipelines(device, presentationFormat) {
                         vert.position.x, base_UV[instanceIndex*16 +  7], base_UV[instanceIndex*16 +  13]
                     ), 0).x
                 );
-
-                // textureValue =((   (1-vert.position.x) * base_UV[instanceIndex*16 +  4] + vert.position.x * base_UV[instanceIndex*16 + 12] ).y
-                //             +  (   (1-vert.position.x) * base_UV[instanceIndex*16 +  7] + vert.position.x * base_UV[instanceIndex*16 + 13] ).y) / 2;
             }
             else if(vert.position.x == 0.0) // changed
             {
@@ -513,9 +472,6 @@ export async function createPipelines(device, presentationFormat) {
                         vert.position.y, base_UV[instanceIndex*16 +  3], base_UV[instanceIndex*16 +  5]
                     ), 0).x
                 );
-
-                // textureValue =((   (1-vert.position.y) * base_UV[instanceIndex*16 +  0] + vert.position.y * base_UV[instanceIndex*16 + 4] ).y
-                //             +  (   (1-vert.position.y) * base_UV[instanceIndex*16 +  3] + vert.position.y * base_UV[instanceIndex*16 + 5] ).y) / 2;
             }
             else if(vert.position.x == 1.0) // changed
             {
@@ -527,39 +483,18 @@ export async function createPipelines(device, presentationFormat) {
                         vert.position.y, base_UV[instanceIndex*16 +  9], base_UV[instanceIndex*16 +  15]
                     ), 0).x
                 );
-
-                // textureValue =((   (1-vert.position.y) * base_UV[instanceIndex*16 +  8] + vert.position.y * base_UV[instanceIndex*16 + 12] ).y
-                //             +  (   (1-vert.position.y) * base_UV[instanceIndex*16 +  9] + vert.position.y * base_UV[instanceIndex*16 + 15] ).y) / 2;
             }
 
             else
             {
-                // textureValue = textureSampleLevel(object_texture, sampler0,texCoordInt, 0).x;
-                // textureValue = textureSample(object_texture, sampler0,sampler0, vec2f(uv.x, 1-uv.y)).x;
                 textureValue = getTexture(object_texture, sampler0, vec2f(uv.x, 1-uv.y), 0).x;
-                // textureValue = uv.y;
             }
-
-            // let textureValue = f32(round(80*(pow(20, textureSampleLevel(object_texture, sampler0,texCoordInt, 0).x - 0.5)/4.5)))/80.0; // textureSampleLevel 뽑아내면 될듯
-
-            // vsOut.position = uni.matrix * vec4f(p*5, 1);
-            // if(textureValue-0.5 < 0)
-            // {
-            //     vsOut.position = uni.matrix * vec4f(p*5, 1);
-            // }
-            // else
-            // {
-            //     vsOut.position = uni.matrix * vec4f(p*5 + normal*(textureValue-0.5)*uni.displacementValue.x, 1);
-            //     // vsOut.position = uni.matrix * vec4f(p*5 + normal*20, 1);
-            //     // vsOut.position = uni.matrix * vec4f(p*5 + textureValue*20, 1);
-            // }
-            // vsOut.position = uni.matrix * vec4f(p*5 + textureValue*20, 1);
-            // vsOut.position = uni.matrix * vec4f(p*5 + normal*2, 1);
 
             vsOut.position = uni.matrix * vec4f(p*5 + normal*(textureValue-0.5)*uni.displacementValue.x, 1);
 
             vsOut.center = vec3f(vert.position.xy, 0);
             vsOut.position2 = vec3f(normalize(p.xyz));
+            // vsOut.normal = normal;
             vsOut.normal = normal;
             vsOut.texcoord = vec2f(uv.x, 1-uv.y);
             vsOut.texcoord1 = vec2f(textureValue, 0);
@@ -569,21 +504,7 @@ export async function createPipelines(device, presentationFormat) {
             let g2 = pos2[  conn[instanceIndex*16+ 9]  ].xyz;
             let g3 = pos2[  conn[instanceIndex*16+10]  ].xyz;
             vsOut.color = color.value;
-            if(uni.color.y == 1)
-            {
-                let view = normalize(  uni.view.xyz - p  );
-                let temp_light = dot(view, normal)*0.5;
-                vsOut.color += color.value * vec4f(temp_light, temp_light, temp_light, 1)  ;
-                vsOut.position2 += vec3f(normalize(p.xyz)) * temp_light  ;
-                vsOut.normal += normal * temp_light;
-                if(dot(view, normal) > 0)
-                {
-                    let highlight = vec3f((pow(dot(view, normal), 100)*0.2), (pow(dot(view, normal), 100)*0.2), (pow(dot(view, normal), 100)*0.2));
-                    vsOut.color += vec4f(highlight, 1);
-                    vsOut.position2 += highlight;
-                    vsOut.normal += highlight;
-                }
-            }
+            vsOut.view = normalize(  uni.view.xyz - p  );
 
             var wire = uni.wireAdjust.x;
             if(uni.wireAdjust.x == 1)
@@ -596,23 +517,31 @@ export async function createPipelines(device, presentationFormat) {
         }
 
         @fragment fn fs(vsOut: VSOutput) -> @location(0) vec4f {
+            var return_color: vec4f;
+            if(uni.color.x == 0) { return_color =  vec4f(vsOut.position2.xyz, 1); }
+            else if(uni.color.x == 1) { return_color = vec4f(vsOut.normal, 1); }
+            else if(uni.color.x == 4) { return_color = vec4f(vsOut.texcoord1.x*5 -2.5, vsOut.texcoord1.x*5 -2.5, vsOut.texcoord1.x*5 -2.5, 1); }
+            else { return_color = vec4f(vsOut.color); }
+
+            let view = vsOut.view;
+            let normal = perturb_normal(object_normal_texture, sampler0, vsOut.normal, vsOut.texcoord);
+            // let normal = vsOut.normal;
+            if(uni.color.y == 1)
+            {
+                let temp_light = dot(view, normal)*0.5;
+                return_color += return_color * vec4f(temp_light, temp_light, temp_light, 1)  ;
+                if(dot(view, normal) > 0)
+                {
+                    let highlight = vec3f((pow(dot(view, normal), 100)*0.2), (pow(dot(view, normal), 100)*0.2), (pow(dot(view, normal), 100)*0.2));
+                    return_color += vec4f(highlight, 1);
+                }
+            }
             if(abs(vsOut.center.x - 0.5) > (0.5-vsOut.adjust) || abs(vsOut.center.y - 0.5) > (0.5-vsOut.adjust)) // 0.49 vsOut.adjust
             {
                 return vec4f(1, 0, 0, 1);
             }
-            // let temp = textureSample(object_texture, sampler0,sampler0, vsOut.texcoord); // textureSampleLevel 뽑아내면 될듯
-            // if(vsOut.normal.z < 0.0)
-            // {
-            //     discard;
-            // }
-            
-            if(uni.color.x == 0) { return vec4f(vsOut.position2.xyz, 1); }
-            else if(uni.color.x == 1) { return vec4f(vsOut.normal, 1); }
-            else if(uni.color.x == 4) { return vec4f(vsOut.texcoord1.x*5 -2.5, vsOut.texcoord1.x*5 -2.5, vsOut.texcoord1.x*5 -2.5, 1); }
-            // return vec4f(temp.xyz*5 - 2.5, 1);
-            // return vec4f(vsOut.texcoord1.x*5 -2.5, vsOut.texcoord1.x*5 -2.5, vsOut.texcoord1.x*5 -2.5, 1);
-            // return vec4f(vsOut.texcoord1.x, vsOut.texcoord1.x, vsOut.texcoord1.x, 1);
-            else { return vec4f(vsOut.color); }
+            // if(vsOut.normal.z < 0.0) {discard;}
+            return return_color;
         }
         `,
     });
@@ -645,6 +574,7 @@ export async function createPipelines(device, presentationFormat) {
             @location(2) position2: vec3f,
             @location(3) texcoord: vec2f,
             @location(4) texcoord1: vec2f,
+            @location(5) view: vec3f,
         };
 
         fn getTexture(texture: texture_2d<f32>, sampler: sampler, uv: vec2f, level: f32) -> vec4f
@@ -653,14 +583,30 @@ export async function createPipelines(device, presentationFormat) {
             // return textureLoad(texture, vec2i(uv*511), i32(level));
         }
 
+        fn cotangent_frame(normal: vec3f, tangent: vec3f, bitangent: vec3f) -> mat3x3f {
+            return mat3x3f(tangent, bitangent, normal);
+        }
+        
+        fn perturb_normal(texture: texture_2d<f32>, sampler: sampler, normal: vec3f, uv: vec2f) -> vec3f {
+            let normal_map = getTexture(texture, sampler, uv, 0).xyz - vec3f(0.5);
+        
+            // TBN 매트릭스 계산
+            let tangent = normalize(dpdx(vec3f(uv, 0.0))); // Tangent (x축)
+            let bitangent = normalize(dpdy(vec3f(uv, 0.0))); // Bitangent (y축)
+            let TBN = cotangent_frame(normal, tangent, bitangent);
+        
+            return normalize(TBN * normal_map);
+        }
+
         @group(0) @binding(0) var<uniform> uni: Uniforms;
         @group(0) @binding(1) var<storage, read> extra_index_storage_buffer: array<u32>;
         @group(0) @binding(2) var<storage, read> extra_base_UV: array<vec2f>;
         @group(0) @binding(3) var<storage, read> extra_vertex_offset: array<i32>;
         @group(0) @binding(4) var object_texture: texture_2d<f32>;
-        @group(0) @binding(5) var sampler0: sampler;
-        @group(0) @binding(6) var<storage, read> base_vertex: array<vec4f>;
-        @group(0) @binding(7) var<storage, read> base_normal: array<vec4f>;
+        @group(0) @binding(5) var object_normal_texture: texture_2d<f32>;
+        @group(0) @binding(6) var sampler0: sampler;
+        @group(0) @binding(7) var<storage, read> base_vertex: array<vec4f>;
+        @group(0) @binding(8) var<storage, read> base_normal: array<vec4f>;
 
         @vertex fn vs(
             @builtin(instance_index) instanceIndex: u32,
@@ -672,6 +618,7 @@ export async function createPipelines(device, presentationFormat) {
             _ = base_normal[0].x;
             _ = extra_base_UV[0].x;
             _ = object_texture;
+            _ = object_normal_texture;
             _ = sampler0;
             _ = extra_index_storage_buffer[0];
             _ = base_vertex[0].x;
@@ -697,17 +644,6 @@ export async function createPipelines(device, presentationFormat) {
             let p = vec3f(base_vertex[extra_index_storage_buffer[vertexIndex]].xyz);
             var normal = -base_normal[extra_index_storage_buffer[vertexIndex]].xyz;
             
-            // vsOut.position = uni.matrix * vec4f(p*5, 1);
-            // if(textureValue-0.5 < 0)
-            // {
-            //     vsOut.position = uni.matrix * vec4f(p*5, 1);
-            // }
-            // else
-            // {
-            //     vsOut.position = uni.matrix * vec4f(p*5 + normal*(textureValue-0.5)*uni.displacementValue.x, 1);
-            //     // vsOut.position = uni.matrix * vec4f(p*5 - normal*20, 1);
-            //     // vsOut.position = uni.matrix * vec4f(p*5 + textureValue*20, 1);
-            // }
             vsOut.position = uni.matrix * vec4f(p*5 + normal*(textureValue-0.5)*uni.displacementValue.x, 1);
 
             vsOut.position2 = vec3f(normalize(p.xyz));
@@ -719,36 +655,32 @@ export async function createPipelines(device, presentationFormat) {
             }
             vsOut.normal = normal;
             vsOut.color = vec4f(0.5, 0, 0, 1);
-            if(uni.color.y == 1)
-            {
-                let view = normalize(  uni.view.xyz - p  );
-                let temp_light = dot(view, normal)*0.5;
-                vsOut.color += vec4f(0.5, 0, 0, 1) * vec4f(temp_light, temp_light, temp_light, 1)  ;
-                vsOut.position2 += vec3f(normalize(p.xyz)) * temp_light  ;
-                vsOut.normal += normal * temp_light ;
-                if(dot(view, normal) > 0)
-                {
-                    let highlight = vec3f((pow(dot(view, normal), 100)*0.2), (pow(dot(view, normal), 100)*0.2), (pow(dot(view, normal), 100)*0.2));
-                    vsOut.color += vec4f(highlight, 1);
-                    vsOut.position2 += highlight;
-                    vsOut.normal += highlight  ;
-                }
-            }
+            vsOut.view = normalize(  uni.view.xyz - p  );
             return vsOut;
         }
 
         @fragment fn fs(vsOut: VSOutput) -> @location(0) vec4f {
-            // let temp = textureSample(object_texture, sampler0, vsOut.texcoord); // textureSampleLevel 뽑아내면 될듯
-            // return vec4f(temp.xyz*5 - 2.5, 1);
-            // return vec4f(vsOut.texcoord, 0, 1);
-            // return vec4f(0.5, 0, 0, 1);
-            // return vsOut.color;
-            // return vec4f(vsOut.texcoord1.x*5 -2.5, vsOut.texcoord1.x*5 -2.5, vsOut.texcoord1.x*5 -2.5, 1);
-            
-            if(uni.color.x == 0) { return vec4f(vsOut.position2.xyz, 1); }
-            else if(uni.color.x == 1) { return vec4f(vsOut.normal.xyz, 1); }
-            else if(uni.color.x == 4) { return vec4f(vsOut.texcoord1.x*5 -2.5, vsOut.texcoord1.x*5 -2.5, vsOut.texcoord1.x*5 -2.5, 1); }
-            else { return vsOut.color; }
+            var return_color: vec4f;
+            if(uni.color.x == 0) { return_color =  vec4f(vsOut.position2.xyz, 1); }
+            else if(uni.color.x == 1) { return_color = vec4f(vsOut.normal, 1); }
+            else if(uni.color.x == 4) { return_color = vec4f(vsOut.texcoord1.x*5 -2.5, vsOut.texcoord1.x*5 -2.5, vsOut.texcoord1.x*5 -2.5, 1); }
+            else { return_color = vec4f(vsOut.color); }
+
+            let view = vsOut.view;
+            let normal = perturb_normal(object_normal_texture, sampler0, vsOut.normal, vsOut.texcoord);
+            // let normal = vsOut.normal;
+            if(uni.color.y == 1)
+            {
+                let temp_light = dot(view, normal)*0.5;
+                return_color += return_color * vec4f(temp_light, temp_light, temp_light, 1)  ;
+                if(dot(view, normal) > 0)
+                {
+                    let highlight = vec3f((pow(dot(view, normal), 100)*0.2), (pow(dot(view, normal), 100)*0.2), (pow(dot(view, normal), 100)*0.2));
+                    return_color += vec4f(highlight, 1);
+                }
+            }
+            // if(vsOut.normal.z < 0.0) {discard;}
+            return return_color;
         }
         `,
     });
@@ -757,23 +689,34 @@ export async function createPipelines(device, presentationFormat) {
         code: /*wgsl*/ `
         struct Uniforms {
             matrix: mat4x4f,
-            view: vec3f,
-            time: f32,
-            wireAdjust: f32,
+            view: vec4f,
+            time: vec4f,
+            wireAdjust: vec4f,
+            displacementValue: vec4f,
+            color: vec4f,
         };
 
         @group(0) @binding(0) var<uniform> uni: Uniforms;
-        @group(0) @binding(1) var<storage, read_write> baseVertex: array<f32>;
+        @group(0) @binding(1) var<storage, read_write> baseVertex: array<vec4f>;
+
+        fn rotationMatrixZ(angle: f32) -> mat4x4f {
+            let c = cos(angle);
+            let s = sin(angle);
+            return mat4x4f(
+                vec4f(c, s, 0.0, 0.0),
+                vec4f(-s, c, 0.0, 0.0),
+                vec4f(0.0, 0.0, 1.0, 0.0),
+                vec4f(0.0, 0.0, 0.0, 1.0)
+            );
+        }
 
         @compute @workgroup_size(256) fn cs(@builtin(global_invocation_id) global_invocation_id: vec3<u32>){
             let id = global_invocation_id.x;
-            _ = uni.time;
+            let time = uni.time.x;
 
-            baseVertex[id*4+0] = baseVertex[id*4+0];
-            // baseVertex[id*4+1] = sin(uni.time*f32(id)/10)+cos(uni.time*f32(id)/10) + (baseVertex[id*4+0] + baseVertex[id*4+2])/2;
-            baseVertex[id*4+1] = baseVertex[id*4+1];
-            baseVertex[id*4+2] = baseVertex[id*4+2];
-            baseVertex[id*4+3] = 0;
+            // baseVertex[id].y = sin(time*f32(id)/100)+cos(time*f32(id)/100) + (baseVertex[id].x + baseVertex[id].z)/2;
+
+            baseVertex[id] = rotationMatrixZ(sin(time)*baseVertex[id].z*0.03) * vec4f(baseVertex[id].xyz, 1.0);
         }
         `,
     });
