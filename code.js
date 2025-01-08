@@ -369,21 +369,18 @@ async function main() {
                 width = entry.contentRect.width;
                 height = entry.contentRect.height;
             }
+            canvas.style.position = 'absolute';
     
             // 비율을 유지하며 너비와 높이를 설정
             if (width / height > aspectRatio) {
-                width = height * aspectRatio;
+                canvas.style.width = `${height}px`;
+                canvas.style.height = `${height}px`;
+                canvas.style.left = `${(width - height) / 2}px`;
             } else {
-                height = width / aspectRatio;
+                canvas.style.width = `${width}px`;
+                canvas.style.height = `${width}px`;
+                canvas.style.top = `${(height - width) / 2}px`;
             }
-    
-            // 캔버스 크기를 비율에 맞게 조정
-            canvas.style.width = `${width}px`;
-            canvas.style.height = `${height}px`;
-            canvas.style.position = 'absolute';
-            canvas.style.left = `${width / 2}px`;
-            // canvas.style.width = '1080px';
-            // canvas.style.height = '1080px';
     
             // 캔버스의 실제 렌더링 크기를 설정
             canvas.width = Math.max(1, Math.min(Math.round(width), device.limits.maxTextureDimension2D));
