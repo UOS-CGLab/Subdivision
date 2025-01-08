@@ -14,13 +14,14 @@ import * as vec3 from "../gl-matrix/vec3.js";
 
 export class Camera {
     constructor() {
+        // this.position = vec3.fromValues(0, 0, 10);
         this.position = vec3.fromValues(0, 0, 10);
         this.target = vec3.fromValues(0, 0, 0);
         this.direction = vec3.fromValues(0, 0, -1);
         this.up = vec3.fromValues(0, 1, 0);
         this.right = vec3.create();
         this.viewMatrix = mat4.create();
-        this.fov = 90;
+        this.fov = 120;
         this.aspect = 1;
         this.near = 0.1;
         this.far = 1000;

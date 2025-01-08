@@ -46,6 +46,7 @@ async function main() {
         Base_Normal_Buffer,
         OrdinaryPointData,
         textures,
+        video,
         sampler,
         limit_Buffers,
         Base_Vertex_After_Buffer,
@@ -77,16 +78,16 @@ async function main() {
         colorAttachments: [
         {
             // view: <- to be filled out when we render
-            clearValue: { r: 0.0, g: 1.0, b: 1.0, a: 1.0 },
+            clearValue: { r: 1.0, g: 1.0, b: 1.0, a: 1.0 },
             loadOp: 'clear',
             storeOp: 'store',
         },
         ],
         depthStencilAttachment: {
-        // view: <- 렌더링할 때 채워집니다.
-        depthClearValue: 1.0,
-        depthLoadOp: 'clear',
-        depthStoreOp: 'store',
+            // view: <- 렌더링할 때 채워집니다.
+            depthClearValue: 1.0,
+            depthLoadOp: 'clear',
+            depthStoreOp: 'store',
         },
         ...(canTimestamp && {
         timestampWrites: {
@@ -108,10 +109,10 @@ async function main() {
         },
         ],
         depthStencilAttachment: {
-        // view: <- 렌더링할 때 채워집니다.
-        depthClearValue: 1.0,
-        depthLoadOp: 'load',
-        depthStoreOp: 'store',
+            // view: <- 렌더링할 때 채워집니다.
+            depthClearValue: 1.0,
+            depthLoadOp: 'load',
+            depthStoreOp: 'store',
         },
         ...(canTimestamp && {
         timestampWrites: {
@@ -122,7 +123,7 @@ async function main() {
         }),
     };
 
-    const { pipeline_Face, pipeline_Edge, pipeline_Vertex, pipelines, pipeline2, pipelineAnime, pipeline_Limit } = await createPipelines(device, presentationFormat);
+    const { pipeline_Face, pipeline_Edge, pipeline_Vertex, pipeline_webCam, pipelines, pipeline2, pipelineAnime, pipeline_Limit } = await createPipelines(device, presentationFormat);
     
     const { fixedBindGroups, animeBindGroup, changedBindGroups } = await changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer, Base_Normal_Buffer, textures, sampler, textureBuffer, connectivityStorageBuffers, base_UVStorageBuffers, pipelines, pipelineAnime, depth);
     
@@ -137,6 +138,28 @@ async function main() {
         then = now;
 
         const startTime = performance.now();
+
+        // const textureView = context.getCurrentTexture().createView();
+        device.queue.copyExternalImageToTexture(
+            { source: video },
+            { texture: textures[2] },
+            [video.videoWidth, video.videoHeight, 1],
+        );
+        
+        // const commandEncoder = device.createCommandEncoder();
+        // const passEncoder = commandEncoder.beginRenderPass({
+        //     colorAttachments: [{
+        //         view: textureView,
+        //         loadOp: 'clear',
+        //         clearValue: { r: 0, g: 0, b: 0, a: 1 },
+        //         storeOp: 'store',
+        //     }],
+        // });
+        // passEncoder.setPipeline(pipeline_webCam);
+        // passEncoder.setBindGroup(0, bindGroup_webCam); // BindGroup 설정
+        // passEncoder.draw(3);
+        // passEncoder.end();
+        // device.queue.submit([commandEncoder.finish()]);
 
         if(settings.getProterty('animation')[0]){
             Base_Vertex = new Float32Array(animationBase['Base_Vertex'+String(parseInt(  now*100%100  )).padStart(2, '0')]); // animation speed
@@ -167,7 +190,7 @@ async function main() {
 
         camera.update();
         mat4.multiply(camera.getProjectionMatrix(), camera.getViewMatrix(), matrixValue);
-        
+
         keyValue = settings.getProterty('moveSpeed');
         if(lightPosition.getProterty('lightIsView') == true)
         {
@@ -193,7 +216,7 @@ async function main() {
             case 'normal': { colorValue[0] = 1; break; }
             case 'level': { colorValue[0] = 2; break; }
             case 'displacement_texture': { colorValue[0] = 4; break; }
-            case 'normal_texture': { colorValue[0] = 8; break; }
+            case 'webCam_texture': { colorValue[0] = 8; break; }
         }
         if(lightPosition.getProterty('lightActive') == true)
             colorValue[1] = 1;
@@ -330,7 +353,7 @@ async function main() {
     const observer = new ResizeObserver(entries => {
         for (const entry of entries) {
             const canvas = entry.target;
-            const aspectRatio = 16 / 9;  // 고정된 비율 (예: 16:9)
+            const aspectRatio = 1;  // 고정된 비율 (예: 16:9) // 16 / 9
     
             let width, height;
     
@@ -357,6 +380,10 @@ async function main() {
             // 캔버스 크기를 비율에 맞게 조정
             canvas.style.width = `${width}px`;
             canvas.style.height = `${height}px`;
+            canvas.style.position = 'absolute';
+            canvas.style.left = `${width / 2}px`;
+            // canvas.style.width = '1080px';
+            // canvas.style.height = '1080px';
     
             // 캔버스의 실제 렌더링 크기를 설정
             canvas.width = Math.max(1, Math.min(Math.round(width), device.limits.maxTextureDimension2D));

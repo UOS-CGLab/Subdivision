@@ -11,7 +11,7 @@ async function createFVertices(folderName, depth) {
     try {
         const patchResponse = await fetch(`${basePath}/patch.txt`);
         const patchData = await patchResponse.text();
-        const subArrays = patchData.split('-');
+        const subArrays = patchData.split('+');
         subArrays.forEach((subArray, index) => {
             const preDataArray = subArray.split(',').map(parseFloat);
             let dataArray1 = [];
@@ -78,6 +78,8 @@ async function createFVertices(folderName, depth) {
     const base_UV = preBaseUVData;
     const OrdinaryPointData = preOrdinaryPointData;
     const extra_base_UV = preExtraBaseUVData;
+
+    console.log(base_UV);
 
     return {
         connectivitys,
@@ -346,9 +348,21 @@ export async function buffers(device, depth, obj, limit, myString){
         usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
     });
 
+    const video = document.getElementById('webcam-video');
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    video.srcObject = stream;
+    await video.play();
+
+    const videoTexture = device.createTexture({
+        size: [video.videoWidth, video.videoHeight],
+        format: 'rgba8unorm',
+        usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+
     let textures = [];
     textures.push(await create_image_texture_buffers(`./${myString}/d512.bmp`, device));
     textures.push(await create_image_texture_buffers(`./${myString}/n.bmp`, device));
+    textures.push(videoTexture);
 
     let { indices, texcoordDatas, indexBuffers, vertexBuffers } = create_texture_buffers(device, depth)
     
@@ -413,6 +427,7 @@ export async function buffers(device, depth, obj, limit, myString){
         Base_Normal_Buffer,
         OrdinaryPointData,
         textures,
+        video,
         sampler,
         limit_Buffers,
         Base_Vertex_After_Buffer,

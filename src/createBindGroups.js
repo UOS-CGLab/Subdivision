@@ -65,6 +65,14 @@ export async function changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer
         device.queue.writeBuffer(colorStorageBuffers[i], 0, colors[i]);
     }
 
+    // const bindGroup_webCam = device.createBindGroup({
+    //     layout: pipeline_webCam.getBindGroupLayout(0),
+    //     entries: [
+    //         { binding: 0, resource: videoTexture.createView(), },
+    //         { binding: 1, resource: sampler, },
+    //     ],
+    // });
+
     const animeBindGroup = device.createBindGroup({
         label: 'bind group for anime',
         layout: pipelineAnime.getBindGroupLayout(0),
@@ -85,10 +93,12 @@ export async function changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer
                 { binding: 0, resource: { buffer: uniformBuffer } },
                 { binding: 1, resource: { buffer: Base_Vertex_Buffer } },
                 { binding: 2, resource: { buffer: Base_Normal_Buffer } },
+                // { binding: 3, resource: videoTexture.createView() },
                 { binding: 3, resource: textures[0].createView() },
                 { binding: 4, resource: textures[1].createView() },
-                { binding: 5, resource: sampler },
-                { binding: 6, resource: { buffer: textureBuffer } },
+                { binding: 5, resource: textures[2].createView() },
+                { binding: 6, resource: sampler },
+                { binding: 7, resource: { buffer: textureBuffer } },
             ],
         }));
         for(let j=0; j<=depth; j++)
@@ -144,9 +154,10 @@ export async function extraBindGroup(device, uniformBuffer, OrdinaryPointData, B
             { binding: 3, resource: { buffer: extra_vertex_offsetStorageBuffers[settings.getProterty('ordinaryLevel')] } },
             { binding: 4, resource: textures[0].createView() },
             { binding: 5, resource: textures[1].createView() },
-            { binding: 6, resource: sampler },
-            { binding: 7, resource: { buffer: Base_Vertex_After_Buffer } },
-            { binding: 8, resource: { buffer: Base_Normal_Buffer } },
+            { binding: 6, resource: textures[2].createView() },
+            { binding: 7, resource: sampler },
+            { binding: 8, resource: { buffer: Base_Vertex_After_Buffer } },
+            { binding: 9, resource: { buffer: Base_Normal_Buffer } },
         ],
     });
 

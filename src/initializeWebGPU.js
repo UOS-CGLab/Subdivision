@@ -5,6 +5,16 @@ export async function initializeWebGPU() {
     if (!adapter) {
         throw new Error('Failed to get GPU adapter. Your browser might not support WebGPU.');
     }
+    // await navigator.gpu.requestAdapter({
+    //     powerPreference: "high-performance",  // 고성능 GPU를 우선적으로 선택
+    //   }).then(adapter => {
+    //     if (adapter) {
+    //       console.log("GPU Adapter found:", adapter);
+    //       // WebGPU 초기화 코드
+    //     } else {
+    //       console.error("No suitable GPU adapter found.");
+    //     }
+    //   });
 
     const canTimestamp = adapter.features.has('timestamp-query');
     const device = await adapter.requestDevice({

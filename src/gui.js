@@ -6,13 +6,13 @@ export class Settings {
             // renderingMode: 'solid',
             // object: 'suzanne',
             pipelineSetting: 'F',
-            color: 'normal',
+            color: 'displacement_texture',
             tesselation: 3,
             ordinaryLevel: 3,
-            draw: [true, true, true, true, false, true, true, true],
+            draw: [true, true, true, true, false, false, false, false],
             moveSpeed: 1,
-            wireAdjust: 0,
-            displacementValue: 30,
+            wireAdjust: 0.05,
+            displacementValue: 0,
             animation: [false, false],
         };
     }
@@ -21,7 +21,7 @@ export class Settings {
         // gui.add(this.settings, 'renderingMode', ['solid', 'wireframe', 'points']).name('renderingMode')// .onChange((name, value) => this.onRadioChange('renderingMode', value));
         // gui.add(this.settings, 'object', ['suzanne', 'monsterfrog', 'bunny', 'dragon', 'cube', 'sphere']).name('object')
         gui.add(this.settings, 'pipelineSetting', ['V', 'L', 'F']).name('Pipeline V or L or F')// .onChange((name, value) => this.onRadioChange('pipelineSetting', value));
-        gui.add(this.settings, 'color', ['position', 'normal', 'level', 'displacement_texture']).name('Color')// .onChange((name, value) => this.onRadioChange('pipelineSetting', value));
+        gui.add(this.settings, 'color', ['position', 'normal', 'level', 'displacement_texture', 'webCam_texture']).name('Color')// .onChange((name, value) => this.onRadioChange('pipelineSetting', value));
         gui.add(this.settings, 'tesselation', 0, 6, 1).name('tesselation').step(1)// .onChange((name, value) => this.onSliderChange('tesselation', value));
         gui.add(this.settings, 'ordinaryLevel', 0, 6, 1).name('ordinaryLevel').step(1)// .onChange((name, value) => this.onSliderChange('ordinaryLevel', value));
 
@@ -29,7 +29,7 @@ export class Settings {
             gui.add(this.settings.draw, i).name('Draw ' + (i + 1))// .onChange((name, value) => this.onCheckboxChange('Draw ' + (i + 1), value));
         }
 
-        gui.add(this.settings, 'wireAdjust', 0, 0.1).name('wireAdjust')// .onChange((name, value) => this.onSliderChange('wireAdjust', value));
+        gui.add(this.settings, 'wireAdjust', 0, 1).name('wireAdjust')// .onChange((name, value) => this.onSliderChange('wireAdjust', value));
         gui.add(this.settings, 'displacementValue', 0, 100).name('displacementValue')// .onChange((name, value) => this.onSliderChange('displacementValue', value));
         gui.add(this.settings, 'moveSpeed', 0, 100).name('moveSpeed')// .onChange((name, value) => this.onSliderChange('moveSpeed', value));
         gui.add(this.settings.animation, 0).name('bite animation')// .onChange((name, value) => this.onCheckboxChange('animation ' + (i + 1), value));
