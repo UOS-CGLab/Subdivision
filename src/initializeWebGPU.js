@@ -50,8 +50,6 @@ export async function fetchData(myString) {
     const base =await data2.json();
     const limit = await data3.json();
 
-    console.log(limit);
-
     const animationBase = await (await fetch('./../'+myString+'/animation/base.json')).json();
 
     const img = document.createElement('img');

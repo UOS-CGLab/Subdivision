@@ -79,8 +79,6 @@ async function createFVertices(folderName, depth) {
     const OrdinaryPointData = preOrdinaryPointData;
     const extra_base_UV = preExtraBaseUVData;
 
-    console.log(base_UV);
-
     return {
         connectivitys,
         base_UV,
@@ -294,6 +292,8 @@ export function uniform_buffers(device)
 export async function buffers(device, depth, obj, limit, myString){
 
     let { connectivitys, base_UV, extra_base_UV, extra_vertex_offsets, OrdinaryPointData } = await createFVertices(myString, depth);
+
+    console.log(connectivitys);
 
     let levels = [];
     let levelsize = 0;
