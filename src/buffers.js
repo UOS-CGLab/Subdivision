@@ -12,6 +12,7 @@ async function createFVertices(folderName, depth) {
         const patchResponse = await fetch(`${basePath}/patch.txt`);
         const patchData = await patchResponse.text();
         const subArrays = patchData.split('+');
+        console.log(subArrays);
         subArrays.forEach((subArray, index) => {
             const preDataArray = subArray.split(',').map(parseFloat);
             let dataArray1 = [];
