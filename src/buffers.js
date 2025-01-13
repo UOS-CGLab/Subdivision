@@ -350,15 +350,41 @@ export async function buffers(device, depth, obj, limit, myString){
     });
 
     const video = document.getElementById('webcam-video');
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    video.srcObject = stream;
-    await video.play();
+    let videoTexture;
+    let videoSource;
+    let videoWidth = 640;
+    let videoHeight = 480;
 
-    const videoTexture = device.createTexture({
-        size: [video.videoWidth, video.videoHeight],
-        format: 'rgba8unorm',
-        usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
-    });
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+        await video.play();
+
+        videoSource = video;
+
+        videoTexture = device.createTexture({
+            size: [video.videoWidth, video.videoHeight],
+            format: 'rgba8unorm',
+            usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
+        });
+    } catch (error) {
+        videoSource = {
+            width: videoWidth,
+            height: videoHeight,
+            // `drawImage`를 대신 수행하는 캔버스 요소
+            canvas: document.createElement('canvas'),
+        };
+        const ctx = videoSource.canvas.getContext('2d');
+        videoSource.canvas.width = videoWidth;
+        videoSource.canvas.height = videoHeight;
+
+        videoTexture = device.createTexture({
+            size: [videoWidth, videoHeight],
+            format: 'rgba8unorm',
+            usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
+        });
+    }
+
 
     let textures = [];
     textures.push(await create_image_texture_buffers(`./${myString}/d512.bmp`, device));
@@ -428,7 +454,7 @@ export async function buffers(device, depth, obj, limit, myString){
         Base_Normal_Buffer,
         OrdinaryPointData,
         textures,
-        video,
+        videoSource,
         sampler,
         limit_Buffers,
         Base_Vertex_After_Buffer,

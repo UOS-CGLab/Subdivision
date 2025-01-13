@@ -46,7 +46,7 @@ async function main() {
         Base_Normal_Buffer,
         OrdinaryPointData,
         textures,
-        video,
+        videoSource,
         sampler,
         limit_Buffers,
         Base_Vertex_After_Buffer,
@@ -139,12 +139,31 @@ async function main() {
 
         const startTime = performance.now();
 
-        // const textureView = context.getCurrentTexture().createView();
-        device.queue.copyExternalImageToTexture(
-            { source: video },
-            { texture: textures[2] },
-            [video.videoWidth, video.videoHeight, 1],
-        );
+        if (videoSource instanceof HTMLVideoElement) {
+            // 실제 비디오에서 텍스처로 복사
+            device.queue.copyExternalImageToTexture(
+                { source: videoSource },
+                { texture: textures[2] },
+                [videoSource.videoWidth, videoSource.videoHeight, 1]
+            );
+        } else {
+            const ctx = videoSource.canvas.getContext('2d');
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, 640, 480); // 빈 화면 처리
+    
+            device.queue.copyExternalImageToTexture(
+                { source: videoSource.canvas },
+                { texture: textures[2] },
+                [640, 480, 1]
+            );
+        }
+
+        // // const textureView = context.getCurrentTexture().createView();
+        // device.queue.copyExternalImageToTexture(
+        //     { source: video },
+        //     { texture: textures[2] },
+        //     [video.videoWidth, video.videoHeight, 1],
+        // );
         
         // const commandEncoder = device.createCommandEncoder();
         // const passEncoder = commandEncoder.beginRenderPass({
@@ -353,7 +372,7 @@ async function main() {
     const observer = new ResizeObserver(entries => {
         for (const entry of entries) {
             const canvas = entry.target;
-            const aspectRatio = 1;  // 고정된 비율 (예: 16:9) // 16 / 9
+            const aspectRatio = 16 / 9;  // 고정된 비율 (예: 16:9) // 16 / 9
     
             let width, height;
     
@@ -373,14 +392,16 @@ async function main() {
     
             // 비율을 유지하며 너비와 높이를 설정
             if (width / height > aspectRatio) {
-                canvas.style.width = `${height}px`;
-                canvas.style.height = `${height}px`;
-                canvas.style.left = `${(width - height) / 2}px`;
+                width = height * aspectRatio;
             } else {
-                canvas.style.width = `${width}px`;
-                canvas.style.height = `${width}px`;
-                canvas.style.top = `${(height - width) / 2}px`;
+                height = width / aspectRatio;
             }
+    
+            // 캔버스 크기를 비율에 맞게 조정
+            canvas.style.width = `${width}px`;
+            canvas.style.height = `${height}px`;
+            // canvas.style.width = '1080px';
+            // canvas.style.height = '1080px';
     
             // 캔버스의 실제 렌더링 크기를 설정
             canvas.width = Math.max(1, Math.min(Math.round(width), device.limits.maxTextureDimension2D));
