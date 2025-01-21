@@ -97,8 +97,9 @@ export async function changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer
                 { binding: 3, resource: textures[0].createView() },
                 { binding: 4, resource: textures[1].createView() },
                 { binding: 5, resource: textures[2].createView() },
-                { binding: 6, resource: sampler },
-                { binding: 7, resource: { buffer: textureBuffer } },
+                { binding: 6, resource: textures[3].createView() },
+                { binding: 7, resource: sampler },
+                { binding: 8, resource: { buffer: textureBuffer } },
             ],
         }));
         for(let j=0; j<=depth; j++)
@@ -124,7 +125,7 @@ export async function changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer
 }
 
 export async function extraBindGroup(device, uniformBuffer, OrdinaryPointData, Base_Vertex_After_Buffer, Base_Normal_Buffer, textures, sampler,
-    extra_base_UVStorageBuffers, extra_vertex_offsetStorageBuffers, pipeline2, depth, settings)
+    extra_base_UVStorageBuffers, extra_vertex_offsetStorageBuffers, extra_vertex_indexesStorageBuffers, pipeline2, depth, settings)
 {
     let OrdinaryPointBuffers = [];
     let OrdinaryStorageBuffers = [];
@@ -152,12 +153,14 @@ export async function extraBindGroup(device, uniformBuffer, OrdinaryPointData, B
             { binding: 1, resource: { buffer: OrdinaryStorageBuffers[settings.getProterty('ordinaryLevel')] } },
             { binding: 2, resource: { buffer: extra_base_UVStorageBuffers[settings.getProterty('ordinaryLevel')] } },
             { binding: 3, resource: { buffer: extra_vertex_offsetStorageBuffers[settings.getProterty('ordinaryLevel')] } },
-            { binding: 4, resource: textures[0].createView() },
-            { binding: 5, resource: textures[1].createView() },
-            { binding: 6, resource: textures[2].createView() },
-            { binding: 7, resource: sampler },
-            { binding: 8, resource: { buffer: Base_Vertex_After_Buffer } },
-            { binding: 9, resource: { buffer: Base_Normal_Buffer } },
+            { binding: 4, resource: { buffer: extra_vertex_indexesStorageBuffers[settings.getProterty('ordinaryLevel')] } },
+            { binding: 5, resource: textures[0].createView() },
+            { binding: 6, resource: textures[1].createView() },
+            { binding: 7, resource: textures[2].createView() },
+            { binding: 8, resource: textures[3].createView() },
+            { binding: 9, resource: sampler },
+            { binding: 10, resource: { buffer: Base_Vertex_After_Buffer } },
+            { binding: 11, resource: { buffer: Base_Normal_Buffer } },
         ],
     });
 

@@ -264,8 +264,9 @@ export async function createPipelines(device, presentationFormat) {
         @group(0) @binding(3) var object_texture: texture_2d<f32>;
         @group(0) @binding(4) var object_normal_texture: texture_2d<f32>;
         @group(0) @binding(5) var webCam_texture: texture_2d<f32>;
-        @group(0) @binding(6) var sampler0: sampler;
-        @group(0) @binding(7) var<storage> textureBuffer: array<f32>;
+        @group(0) @binding(6) var object_color_texture: texture_2d<f32>;
+        @group(0) @binding(7) var sampler0: sampler;
+        @group(0) @binding(8) var<storage> textureBuffer: array<f32>;
         @group(1) @binding(0) var<storage, read> conn: array<i32>;
         @group(1) @binding(1) var<storage, read> base_UV: array<vec2f>;
         @group(1) @binding(2) var<storage, read> color: Color;
@@ -414,6 +415,7 @@ export async function createPipelines(device, presentationFormat) {
             _ = object_texture;
             _ = object_normal_texture;
             _ = webCam_texture;
+            _ = object_color_texture;
             _ = base_normal[0];
 
 
@@ -541,15 +543,18 @@ export async function createPipelines(device, presentationFormat) {
 
             // textureValue = getTexture(object_texture, sampler0, vec2f(uv.x, 1-uv.y), 0);
 
-            vsOut.position = uni.matrix * vec4f(p*5 + normal*(textureValue.x-0.5)*uni.displacementValue.x, 1);
+            vsOut.position = uni.matrix * vec4f(p*5 + normal*(textureValue.x-0.5)*(uni.displacementValue.x), 1);
+            // vsOut.position = uni.matrix * vec4f(-(p.x*5 + normal.x*(textureValue.x-0.5)*uni.displacementValue.x),
+            // p.y*5 + normal.y*(textureValue.x-0.5)*uni.displacementValue.x,
+            // p.z*5 + normal.z*(textureValue.x-0.5)*uni.displacementValue.x, 1);
 
             vsOut.center = vec3f(vert.position.xy, 0);
             vsOut.position2 = vec3f(normalize(p.xyz));
             // vsOut.normal = normal;
             vsOut.normal = normal;
             vsOut.texcoord = vec2f(uv.x, 1-uv.y);
-            vsOut.texcoord1 = vec3f(textureValue.x*5 -2.5, textureValue.x*5 -2.5, textureValue.x*5 -2.5);
-            // vsOut.texcoord1 = vec3f(textureValue.xyz);
+            // vsOut.texcoord1 = vec3f(textureValue.x*5 -2.5, textureValue.x*5 -2.5, textureValue.x*5 -2.5);
+            vsOut.texcoord1 = vec3f(textureValue.xyz);
 
             let g0 = pos2[  conn[instanceIndex*16+ 5]  ].xyz;
             let g1 = pos2[  conn[instanceIndex*16+ 6]  ].xyz;
@@ -575,7 +580,9 @@ export async function createPipelines(device, presentationFormat) {
 
             if(uni.color.x == 0) { return_color =  vec4f(vsOut.position2.xyz, 1); }
             else if(uni.color.x == 1) { return_color = vec4f(vsOut.normal, 1); }
-            else if(uni.color.x == 4) { return_color = vec4f(vsOut.texcoord1.xyz, 1); }
+            else if(uni.color.x == 4) { return_color = vec4f(vsOut.texcoord1.xxx*5-2.5, 1); }
+            // else if(uni.color.x == 8) { return_color = getTexture(object_normal_texture, sampler0, vsOut.texcoord, 0); }
+            // else if(uni.color.x == 8) { return_color = vec4f(0, 0.5, 0, 1.0); }
             else if(uni.color.x == 8) { return_color = getTexture(webCam_texture, sampler0, vsOut.position2.yz, 0); }
             else { return_color = vec4f(vsOut.color); }
 
@@ -585,11 +592,11 @@ export async function createPipelines(device, presentationFormat) {
             if(uni.color.y == 1)
             {
                 let temp_light = dot(view, normal)*0.5;
-                return_color += return_color * vec4f(temp_light, temp_light, temp_light, 1)  ;
+                return_color += return_color * vec4f(temp_light, temp_light, temp_light, 0)  ;
                 if(dot(view, normal) > 0)
                 {
                     let highlight = vec3f((pow(dot(view, normal), 100)*0.2), (pow(dot(view, normal), 100)*0.2), (pow(dot(view, normal), 100)*0.2));
-                    return_color += vec4f(highlight, 1);
+                    return_color += vec4f(highlight, 0);
                 }
             }
             if(abs(vsOut.center.x - 0.5) > (0.5-vsOut.adjust) || abs(vsOut.center.y - 0.5) > (0.5-vsOut.adjust)) // 0.49 vsOut.adjust
@@ -597,6 +604,17 @@ export async function createPipelines(device, presentationFormat) {
                 return vec4f(0, 0, 0, 1);
             }
             // if(vsOut.normal.z < 0.0) {discard;}
+            // var l:vec3f = normalize(vsOut.view.xyz);
+            // var n = vsOut.normal;
+            // var l_dot_n: f32 = max(dot(l, n), 0.0);
+            // var ambient: vec3f = vec3f(0.0, 0.05, 0.0);
+            // var diffuse: vec3f = vec3f(0.4, 0.5, 0.4) * l_dot_n;
+            // var specular: vec3f = vec3f(0, 0, 0);
+            // if(l_dot_n > 0)
+            // {
+            //     specular = vec3f(0.04,0.7,0.04) * pow(max(dot(l, n), 0), 2.5);
+            // }
+            // return_color = vec4f((ambient + diffuse + specular), 1.0);
             return return_color;
         }
         `,
@@ -658,16 +676,18 @@ export async function createPipelines(device, presentationFormat) {
         @group(0) @binding(1) var<storage, read> extra_index_storage_buffer: array<u32>;
         @group(0) @binding(2) var<storage, read> extra_base_UV: array<vec2f>;
         @group(0) @binding(3) var<storage, read> extra_vertex_offset: array<i32>;
-        @group(0) @binding(4) var object_texture: texture_2d<f32>;
-        @group(0) @binding(5) var object_normal_texture: texture_2d<f32>;
-        @group(0) @binding(6) var webCam_texture: texture_2d<f32>;
-        @group(0) @binding(7) var sampler0: sampler;
-        @group(0) @binding(8) var<storage, read> base_vertex: array<vec4f>;
-        @group(0) @binding(9) var<storage, read> base_normal: array<vec4f>;
+        @group(0) @binding(4) var<storage, read> extra_vertex_indexes: array<i32>;
+        @group(0) @binding(5) var object_texture: texture_2d<f32>;
+        @group(0) @binding(6) var object_normal_texture: texture_2d<f32>;
+        @group(0) @binding(7) var webCam_texture: texture_2d<f32>;
+        @group(0) @binding(8) var object_color_texture: texture_2d<f32>;
+        @group(0) @binding(9) var sampler0: sampler;
+        @group(0) @binding(10) var<storage, read> base_vertex: array<vec4f>;
+        @group(0) @binding(11) var<storage, read> base_normal: array<vec4f>;
 
         @vertex fn vs(
-            @builtin(instance_index) instanceIndex: u32,
             @builtin(vertex_index) vertexIndex: u32,
+            @builtin(instance_index) instanceIndex: u32,
             vert: Vertex,
         ) -> VSOutput {
             var vsOut: VSOutput;
@@ -677,40 +697,47 @@ export async function createPipelines(device, presentationFormat) {
             _ = object_texture;
             _ = object_normal_texture;
             _ = webCam_texture;
+            _ = object_color_texture;
             _ = sampler0;
             _ = extra_index_storage_buffer[0];
             _ = base_vertex[0].x;
             _ = uni.matrix[0];
             _ = extra_vertex_offset[0];
+            _ = extra_vertex_indexes[0];
+
+            var normal = -base_normal[extra_index_storage_buffer[vertexIndex]].xyz;
 
             let index = extra_vertex_offset[vertexIndex];
-            let vertex_count = extra_vertex_offset[vertexIndex+1] - extra_vertex_offset[vertexIndex];
+            var vertex_count = extra_vertex_offset[vertexIndex+1] - extra_vertex_offset[vertexIndex];
 
             var sum: f32 = 0.0;
+            var normalTextureSum: vec3f = vec3f(0);
+            var normalSum: vec3f = vec3f(0);
             for(var i=0; i<vertex_count; i++)
             {
                 sum = sum + getTexture(object_texture, sampler0, vec2f(extra_base_UV[index+i].x, (1-extra_base_UV[index+i].y)), 0).x;
+                if(vertexIndex % 6 == 0)
+                {
+                    normalSum = normalSum -base_normal[extra_index_storage_buffer[i32(vertexIndex)+1 + 6*(i - i32(extra_vertex_indexes[vertexIndex/6]))]].xyz;
+                }
+            }
+            if(vertexIndex % 6 == 0)
+            {
+                normal = normalSum / f32(vertex_count);
             }
             let textureValue = sum / f32(vertex_count);
             
-            let uv = extra_base_UV[vertexIndex];
+            let uv = extra_base_UV[extra_vertex_offset[vertexIndex]];
             vsOut.texcoord = vec2f(uv.x, 1-uv.y);
             vsOut.texcoord1 = vec2f(textureValue, 0);
             let texCoordInt = vec2i(  i32(uv.x),  i32((1-uv.y))  );
 
             // let p = vert.position.xyz;
             let p = vec3f(base_vertex[extra_index_storage_buffer[vertexIndex]].xyz);
-            var normal = -base_normal[extra_index_storage_buffer[vertexIndex]].xyz;
             
-            vsOut.position = uni.matrix * vec4f(p*5 + normal*(textureValue-0.5)*uni.displacementValue.x, 1);
+            vsOut.position = uni.matrix * vec4f(p*5 + normal*(textureValue-0.5)*(uni.displacementValue.x), 1);
 
             vsOut.position2 = vec3f(normalize(p.xyz));
-            if(normal.x == 0)
-            {
-                normal = -normalize( cross( base_vertex[extra_index_storage_buffer[vertexIndex]].xyz - base_vertex[extra_index_storage_buffer[vertexIndex-1]].xyz ,
-                                            base_vertex[extra_index_storage_buffer[vertexIndex]].xyz - base_vertex[extra_index_storage_buffer[vertexIndex-2]].xyz));
-                // normal = -base_normal[extra_index_storage_buffer[vertexIndex-1]].xyz;
-            }
             vsOut.normal = normal;
             vsOut.color = vec4f(0.5, 0.5, 1, 1);
             vsOut.view = normalize(  uni.view.xyz - p  );
@@ -721,7 +748,10 @@ export async function createPipelines(device, presentationFormat) {
             var return_color: vec4f;
             if(uni.color.x == 0) { return_color =  vec4f(vsOut.position2.xyz, 1); }
             else if(uni.color.x == 1) { return_color = vec4f(vsOut.normal, 1); }
-            else if(uni.color.x == 4) { return_color = vec4f(vsOut.texcoord1.x*5 -2.5, vsOut.texcoord1.x*5 -2.5, vsOut.texcoord1.x*5 -2.5, 1); }
+            else if(uni.color.x == 4) { return_color = vec4f(vsOut.texcoord1.xxx*5-2.5, 1); }
+            // else if(uni.color.x == 8) { return_color = getTexture(object_normal_texture, sampler0, vsOut.texcoord, 0); }
+            // else if(uni.color.x == 8) { return_color = vec4f(0.753, 0.753, 0.753, 1.0); }
+            // else if(uni.color.x == 8) { return_color = vec4f(0, 0.5, 0, 1.0); }
             else if(uni.color.x == 8) { return_color = getTexture(webCam_texture, sampler0, vsOut.position2.yz, 0); }
             else { return_color = vec4f(vsOut.color); }
 
@@ -731,7 +761,7 @@ export async function createPipelines(device, presentationFormat) {
             if(uni.color.y == 1)
             {
                 let temp_light = dot(view, normal)*0.5;
-                return_color += return_color * vec4f(temp_light, temp_light, temp_light, 1)  ;
+                return_color += return_color * vec4f(temp_light, temp_light, temp_light, 0);
                 if(dot(view, normal) > 0)
                 {
                     let highlight = vec3f((pow(dot(view, normal), 100)*0.2), (pow(dot(view, normal), 100)*0.2), (pow(dot(view, normal), 100)*0.2));
@@ -739,6 +769,17 @@ export async function createPipelines(device, presentationFormat) {
                 }
             }
             // if(vsOut.normal.z < 0.0) {discard;}
+            // var l:vec3f = normalize(vsOut.view.xyz);
+            // var n = vsOut.normal;
+            // var l_dot_n: f32 = max(dot(l, n), 0.0);
+            // var ambient: vec3f = vec3f(0.0, 0.05, 0.0);
+            // var diffuse: vec3f = vec3f(0.4, 0.5, 0.4) * l_dot_n;
+            // var specular: vec3f = vec3f(0, 0, 0);
+            // if(l_dot_n > 0)
+            // {
+            //     specular = vec3f(0.04,0.7,0.04) * pow(max(dot(l, n), 0), 2.5);
+            // }
+            // return_color = vec4f((ambient + diffuse + specular), 1.0);
             return return_color;
         }
         `,

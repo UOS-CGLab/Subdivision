@@ -12,7 +12,6 @@ async function createFVertices(folderName, depth) {
         const patchResponse = await fetch(`${basePath}/patch.txt`);
         const patchData = await patchResponse.text();
         const subArrays = patchData.split('+');
-        console.log(subArrays);
         subArrays.forEach((subArray, index) => {
             const preDataArray = subArray.split(',').map(parseFloat);
             let dataArray1 = [];
@@ -38,7 +37,8 @@ async function createFVertices(folderName, depth) {
 
     let preOrdinaryPointData = [];
     let preExtraBaseUVData = [];
-    const extra_vertex_offsets = [];
+    let extra_vertex_offsets = [];
+    let extra_vertex_indexes = [];
     try {
         for(let i=0; i<=depth; i++)
         {
@@ -49,26 +49,34 @@ async function createFVertices(folderName, depth) {
             let dataArray2 = [];
             let extra_vertex_offset = [];
             let offset = 0;
+            let extra_vertex_index = [];
+            let lastIndex = 0;
             extra_vertex_offset.push(offset);
             lines.forEach(line => {
                 const parts = line.trim().split(' '); // 공백으로 분리
                 const integers = parts.slice(0, 6).map(item => parseInt(item, 10)); // 처음 6개 항목을 정수로 변환
-                const floats = parts.slice(7).map(item => parseFloat(item)); // 7번째부터 끝까지 소수로 변환
+                const offsets = parts.slice(6, 12).map(item => parseInt(item, 10));
+                const floats = parts.slice(12).map(item => parseFloat(item)); // 12번째부터 끝까지 소수로 변환
+                const currentIndex = integers[0];
+                if(lastIndex != currentIndex) { extra_vertex_index.push(0); }
+                else {extra_vertex_index.push(extra_vertex_index[extra_vertex_index.length-1] + 1); }
 
-                extra_vertex_offset.push(offset+4);
-                extra_vertex_offset.push(offset+8);
-                extra_vertex_offset.push(offset+12);
-                extra_vertex_offset.push(offset+16);
-                extra_vertex_offset.push(offset+20);
-                offset = offset + floats.length/2;
-                extra_vertex_offset.push(offset);
+                extra_vertex_offset.push(offset+=offsets[0]);
+                extra_vertex_offset.push(offset+=offsets[1]);
+                extra_vertex_offset.push(offset+=offsets[2]);
+                extra_vertex_offset.push(offset+=offsets[3]);
+                extra_vertex_offset.push(offset+=offsets[4]);
+                extra_vertex_offset.push(offset+=offsets[5]);
+
+                lastIndex = currentIndex;
 
                 dataArray1 = dataArray1.concat(integers); // 정수 배열에 추가
                 dataArray2 = dataArray2.concat(floats); // 소수 배열에 추가
             });
-            extra_vertex_offsets.push(new Uint32Array(extra_vertex_offset));
             preOrdinaryPointData.push(new Uint32Array(dataArray1));
             preExtraBaseUVData.push(new Float32Array(dataArray2));
+            extra_vertex_offsets.push(new Uint32Array(extra_vertex_offset));
+            extra_vertex_indexes.push(new Uint32Array(extra_vertex_index));
         }
     } catch (error) {
         console.error('Error fetching extra_ordinary.txt:', error);
@@ -85,6 +93,7 @@ async function createFVertices(folderName, depth) {
         base_UV,
         extra_base_UV,
         extra_vertex_offsets,
+        extra_vertex_indexes,
         OrdinaryPointData
     };
 }
@@ -292,9 +301,7 @@ export function uniform_buffers(device)
 
 export async function buffers(device, depth, obj, limit, myString){
 
-    let { connectivitys, base_UV, extra_base_UV, extra_vertex_offsets, OrdinaryPointData } = await createFVertices(myString, depth);
-
-    console.log(connectivitys);
+    let { connectivitys, base_UV, extra_base_UV, extra_vertex_offsets, extra_vertex_indexes, OrdinaryPointData } = await createFVertices(myString, depth);
 
     let levels = [];
     let levelsize = 0;
@@ -303,6 +310,7 @@ export async function buffers(device, depth, obj, limit, myString){
     let base_UVStorageBuffers = [];
     let extra_base_UVStorageBuffers = [];
     let extra_vertex_offsetStorageBuffers = [];
+    let extra_vertex_indexesStorageBuffers = [];
 
     for (let i=0; i<=depth; i++)
     {
@@ -341,6 +349,14 @@ export async function buffers(device, depth, obj, limit, myString){
         });
         device.queue.writeBuffer(extra_vertex_offsetStorageBuffer, 0, extra_vertex_offsets[i]);
         extra_vertex_offsetStorageBuffers.push(extra_vertex_offsetStorageBuffer);
+
+        const extra_vertex_indexesStorageBuffer = device.createBuffer({
+            label: 'extra_vertex_indexes buffer',
+            size: extra_vertex_indexes[i].byteLength,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+        });
+        device.queue.writeBuffer(extra_vertex_indexesStorageBuffer, 0, extra_vertex_indexes[i]);
+        extra_vertex_indexesStorageBuffers.push(extra_vertex_indexesStorageBuffer);
     }
 
     const textureBuffer = device.createBuffer({
@@ -390,6 +406,7 @@ export async function buffers(device, depth, obj, limit, myString){
     textures.push(await create_image_texture_buffers(`./${myString}/d512.bmp`, device));
     textures.push(await create_image_texture_buffers(`./${myString}/n.bmp`, device));
     textures.push(videoTexture);
+    textures.push(await create_image_texture_buffers(`./${myString}/d512.bmp`, device));
 
     let { indices, texcoordDatas, indexBuffers, vertexBuffers } = create_texture_buffers(device, depth)
     
@@ -445,6 +462,7 @@ export async function buffers(device, depth, obj, limit, myString){
         base_UVStorageBuffers,
         extra_base_UVStorageBuffers,
         extra_vertex_offsetStorageBuffers,
+        extra_vertex_indexesStorageBuffers,
         textureBuffer,
         indices,
         texcoordDatas,

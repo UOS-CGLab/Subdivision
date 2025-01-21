@@ -43,6 +43,31 @@ export async function initializeWebGPU() {
 }
 
 export async function fetchData(myString) {
+    // const topologyParts = [];
+    // let partIndex = 1;
+    // let partFetched = true;
+
+    // while (partFetched) {
+    //     try {
+    //         const response = await fetch(`./${myString}/topology${partIndex}.json`);
+    //         if (!response.ok) {
+    //             partFetched = false; // Stop fetching if a part doesn't exist
+    //             break;
+    //         }
+    //         const partData = await response.json();
+    //         topologyParts.push(partData);
+    //         partIndex++;
+    //     } catch (error) {
+    //         console.error("Error fetching topology part:", partIndex, error);
+    //         partFetched = false;
+    //     }
+    // }
+    // // Merge all parts into a single object
+    // const obj = topologyParts.reduce((acc, part) => {
+    //     // Assuming parts are arrays; modify this if the structure is different
+    //     return acc.concat(part);
+    // }, []);
+
     const data = await fetch('./' + myString + '/topology.json');
     const data2 = await fetch('./' + myString + '/base.json');
     const data3 = await fetch('./' + myString + '/limit_point.json');

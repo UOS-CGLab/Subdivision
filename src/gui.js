@@ -3,23 +3,23 @@ import * as dat from '../node_modules/dat.gui/build/dat.gui.module.js';
 export class Settings {
     constructor() {
         this.settings = {
-            // renderingMode: 'solid',
-            // object: 'suzanne',
+            object: 'monsterfrog',
+            background: 'space',
             pipelineSetting: 'F',
             color: 'displacement_texture',
             tesselation: 3,
             ordinaryLevel: 3,
             draw: [true, true, true, true, false, false, false, false],
             moveSpeed: 1,
-            wireAdjust: 0.05,
+            wireAdjust: 0,
             displacementValue: 0,
             animation: [false, false],
         };
     }
 
     addGui(gui) {
-        // gui.add(this.settings, 'renderingMode', ['solid', 'wireframe', 'points']).name('renderingMode')// .onChange((name, value) => this.onRadioChange('renderingMode', value));
-        // gui.add(this.settings, 'object', ['suzanne', 'monsterfrog', 'bunny', 'dragon', 'cube', 'sphere']).name('object')
+        gui.add(this.settings, 'object', ['monsterfrog', 'ninja_head', 'sphere']).name('object')
+        gui.add(this.settings, 'background', ['space', 'laboratory']).name('background')
         gui.add(this.settings, 'pipelineSetting', ['V', 'L', 'F']).name('Pipeline V or L or F')// .onChange((name, value) => this.onRadioChange('pipelineSetting', value));
         gui.add(this.settings, 'color', ['position', 'normal', 'level', 'displacement_texture', 'webCam_texture']).name('Color')// .onChange((name, value) => this.onRadioChange('pipelineSetting', value));
         gui.add(this.settings, 'tesselation', 0, 6, 1).name('tesselation').step(1)// .onChange((name, value) => this.onSliderChange('tesselation', value));
@@ -50,8 +50,10 @@ export class Settings {
 
     getProterty(name) {
         switch (name) {
-            case 'renderingMode':
-                return this.settings.renderingMode;
+            case 'object':
+                return this.settings.object;
+            case 'background':
+                return this.settings.background;
             case 'pipelineSetting':
                 return this.settings.pipelineSetting;
             case 'color':

@@ -1,4 +1,5 @@
-import { mat4 } from './src/mat4.js';
+// import { mat4 } from './src/mat4.js';
+import {mat4} from 'https://webgpufundamentals.org/3rdparty/wgpu-matrix.module.js';
 import { fpsAverage, jsAverage, gpuAverage } from './src/RollingAverage.js';
 import { initializeWebGPU, fetchData } from './src/initializeWebGPU.js';
 import { initializeScene } from './src/gui.js';
@@ -8,12 +9,12 @@ import { Camera, mouse_move, addkeyboardEvent} from './src/camera.js';
 
 import { uniform_buffers, buffers} from './src/buffers.js';
 
-const myString = "monsterfrog";
-const depth = 6;
+let myString = "monsterfrog";
+let backgroundString = "space";
+let depth = 6;
 
 async function main() {
     let { canvas, device, context, presentationFormat, canTimestamp } = await initializeWebGPU();
-    let { obj, Base_Vertex, animationBase, limit } = await fetchData(myString);
     const camera = new Camera();
     let keyValue = 1;
     canvas, keyValue = mouse_move(canvas, camera);
@@ -31,12 +32,80 @@ async function main() {
 
     let { uniformBuffer, uniformValues, matrixValue, viewValue, timeValue, wireValue, displacementValue, colorValue } = uniform_buffers(device);
 
-    let { 
+
+
+        
+    async function changeString(string) {
+        let { obj, Base_Vertex, animationBase, limit } = await fetchData(myString);
+
+        let {
+            levels,
+            connectivityStorageBuffers,
+            base_UVStorageBuffers,
+            extra_base_UVStorageBuffers,
+            extra_vertex_offsetStorageBuffers,
+            extra_vertex_indexesStorageBuffers,
+            textureBuffer,
+            indices,
+            texcoordDatas,
+            indexBuffers,
+            vertexBuffers,
+            Base_Vertex_Buffer,
+            Base_Normal_Buffer,
+            OrdinaryPointData,
+            textures,
+            videoSource,
+            sampler,
+            limit_Buffers,
+            Base_Vertex_After_Buffer,
+            OrdinaryBuffer
+        } = await buffers(device, depth, obj, limit, string);
+
+        let { pipeline_Face, pipeline_Edge, pipeline_Vertex, pipeline_webCam, pipelines, pipeline2, pipelineAnime, pipeline_Limit } = await createPipelines(device, presentationFormat);
+        
+        let { fixedBindGroups, animeBindGroup, changedBindGroups } = await changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer, Base_Normal_Buffer, textures, sampler, textureBuffer, connectivityStorageBuffers, base_UVStorageBuffers, pipelines, pipelineAnime, depth);
+        
+        let bindGroups = [];
+        for (let i=0; i<=depth; i++){
+            bindGroups.push(createBindGroup(device, pipeline_Face, pipeline_Edge, pipeline_Vertex, Base_Vertex_Buffer, levels[i],i+1));
+        }
+
+        return {
+            obj, Base_Vertex, animationBase, limit,
+            levels,
+            connectivityStorageBuffers,
+            base_UVStorageBuffers,
+            extra_base_UVStorageBuffers,
+            extra_vertex_offsetStorageBuffers,
+            extra_vertex_indexesStorageBuffers,
+            textureBuffer,
+            indices,
+            texcoordDatas,
+            indexBuffers,
+            vertexBuffers,
+            Base_Vertex_Buffer,
+            Base_Normal_Buffer,
+            OrdinaryPointData,
+            textures,
+            videoSource,
+            sampler,
+            limit_Buffers,
+            Base_Vertex_After_Buffer,
+            OrdinaryBuffer,
+            pipeline_Face, pipeline_Edge, pipeline_Vertex, pipeline_webCam, pipelines, pipeline2, pipelineAnime, pipeline_Limit,
+            fixedBindGroups, animeBindGroup, changedBindGroups,
+            bindGroups,
+        }
+    }
+
+    let {
+        obj, Base_Vertex, animationBase, limit,
         levels,
         connectivityStorageBuffers,
         base_UVStorageBuffers,
         extra_base_UVStorageBuffers,
         extra_vertex_offsetStorageBuffers,
+        extra_vertex_indexesStorageBuffers,
         textureBuffer,
         indices,
         texcoordDatas,
@@ -50,8 +119,12 @@ async function main() {
         sampler,
         limit_Buffers,
         Base_Vertex_After_Buffer,
-        OrdinaryBuffer
-    } = await buffers(device, depth, obj, limit, myString);
+        OrdinaryBuffer,
+        pipeline_Face, pipeline_Edge, pipeline_Vertex, pipeline_webCam, pipelines, pipeline2, pipelineAnime, pipeline_Limit,
+        fixedBindGroups, animeBindGroup, changedBindGroups,
+        bindGroups,
+    } = await changeString(myString);
+
 
     const { querySet, resolveBuffer, resultBuffer } = (() => {
         if (!canTimestamp) {
@@ -123,14 +196,310 @@ async function main() {
         }),
     };
 
-    const { pipeline_Face, pipeline_Edge, pipeline_Vertex, pipeline_webCam, pipelines, pipeline2, pipelineAnime, pipeline_Limit } = await createPipelines(device, presentationFormat);
+
+
+
     
-    const { fixedBindGroups, animeBindGroup, changedBindGroups } = await changedBindGroup(device, uniformBuffer, Base_Vertex_Buffer, Base_Normal_Buffer, textures, sampler, textureBuffer, connectivityStorageBuffers, base_UVStorageBuffers, pipelines, pipelineAnime, depth);
+
+    const skyBoxModule = device.createShaderModule({
+        code: `
+          struct Uniforms {
+            viewDirectionProjectionInverse: mat4x4f,
+          };
     
-    let bindGroups = [];
-    for (let i=0; i<=depth; i++){
-        bindGroups.push(createBindGroup(device, pipeline_Face, pipeline_Edge, pipeline_Vertex, Base_Vertex_Buffer, levels[i],i+1));
+          struct VSOutput {
+            @builtin(position) position: vec4f,
+            @location(0) pos: vec4f,
+          };
+    
+          @group(0) @binding(0) var<uniform> uni: Uniforms;
+          @group(0) @binding(1) var ourSampler: sampler;
+          @group(0) @binding(2) var ourTexture: texture_cube<f32>;
+    
+          @vertex fn vs(@builtin(vertex_index) vNdx: u32) -> VSOutput {
+            let pos = array(
+              vec2f(-1, 3),
+              vec2f(-1,-1),
+              vec2f( 3,-1),
+            );
+            var vsOut: VSOutput;
+            vsOut.position = vec4f(pos[vNdx], 1, 1);
+            vsOut.pos = vsOut.position;
+            return vsOut;
+          }
+    
+          @fragment fn fs(vsOut: VSOutput) -> @location(0) vec4f {
+            let t = uni.viewDirectionProjectionInverse * vsOut.pos;
+            return textureSample(ourTexture, ourSampler, normalize(t.xyz / t.w) * vec3f(1, 1, -1));
+          }
+        `,
+      });
+    
+      const skyBoxPipeline = device.createRenderPipeline({
+        label: 'no attributes',
+        layout: 'auto',
+        vertex: {
+          module: skyBoxModule,
+        },
+        fragment: {
+          module: skyBoxModule,
+          targets: [{ format: presentationFormat }],
+        },
+        depthStencil: {
+          depthWriteEnabled: true,
+          depthCompare: 'less-equal',
+          format: 'depth24plus',
+        },
+      });
+    
+      const numMipLevels = (...sizes) => {
+        const maxSize = Math.max(...sizes);
+        return 1 + Math.log2(maxSize) | 0;
+      };
+    
+      function copySourcesToTexture(device, texture, sources, {flipY} = {}) {
+        sources.forEach((source, layer) => {
+          device.queue.copyExternalImageToTexture(
+            { source, flipY, },
+            { texture, origin: [0, 0, layer] },
+            { width: source.width, height: source.height },
+          );
+        });
+        if (texture.mipLevelCount > 1) {
+          generateMips(device, texture);
+        }
+      }
+    
+      function createTextureFromSources(device, sources, options = {}) {
+        // Assume are sources all the same size so just use the first one for width and height
+        const source = sources[0];
+        const texture = device.createTexture({
+          format: 'rgba8unorm',
+          mipLevelCount: options.mips ? numMipLevels(source.width, source.height) : 1,
+          size: [source.width, source.height, sources.length],
+          usage: GPUTextureUsage.TEXTURE_BINDING |
+                 GPUTextureUsage.COPY_DST |
+                 GPUTextureUsage.RENDER_ATTACHMENT,
+        });
+        copySourcesToTexture(device, texture, sources, options);
+        return texture;
+      }
+
+      const generateMips = (() => {
+        let sampler;
+        let module;
+        const pipelineByFormat = {};
+    
+        return function generateMips(device, texture) {
+          if (!module) {
+            module = device.createShaderModule({
+              label: 'textured quad shaders for mip level generation',
+              code: `
+                struct VSOutput {
+                  @builtin(position) position: vec4f,
+                  @location(0) texcoord: vec2f,
+                };
+    
+                @vertex fn vs(
+                  @builtin(vertex_index) vertexIndex : u32
+                ) -> VSOutput {
+                  let pos = array(
+    
+                    vec2f( 0.0,  0.0),  // center
+                    vec2f( 1.0,  0.0),  // right, center
+                    vec2f( 0.0,  1.0),  // center, top
+    
+                    // 2st triangle
+                    vec2f( 0.0,  1.0),  // center, top
+                    vec2f( 1.0,  0.0),  // right, center
+                    vec2f( 1.0,  1.0),  // right, top
+                  );
+    
+                  var vsOutput: VSOutput;
+                  let xy = pos[vertexIndex];
+                  vsOutput.position = vec4f(xy * 2.0 - 1.0, 0.0, 1.0);
+                  vsOutput.texcoord = vec2f(xy.x, 1.0 - xy.y);
+                  return vsOutput;
+                }
+    
+                @group(0) @binding(0) var ourSampler: sampler;
+                @group(0) @binding(1) var ourTexture: texture_2d<f32>;
+    
+                @fragment fn fs(fsInput: VSOutput) -> @location(0) vec4f {
+                  return textureSample(ourTexture, ourSampler, fsInput.texcoord);
+                }
+              `,
+            });
+    
+            sampler = device.createSampler({
+              minFilter: 'linear',
+              magFilter: 'linear',
+            });
+          }
+    
+          if (!pipelineByFormat[texture.format]) {
+            pipelineByFormat[texture.format] = device.createRenderPipeline({
+              label: 'mip level generator pipeline',
+              layout: 'auto',
+              vertex: {
+                module,
+              },
+              fragment: {
+                module,
+                targets: [{ format: texture.format }],
+              },
+            });
+          }
+          const pipeline = pipelineByFormat[texture.format];
+    
+          const encoder = device.createCommandEncoder({
+            label: 'mip gen encoder',
+          });
+    
+          let width = texture.width;
+          let height = texture.height;
+          let baseMipLevel = 0;
+          while (width > 1 || height > 1) {
+            width = Math.max(1, width / 2 | 0);
+            height = Math.max(1, height / 2 | 0);
+    
+            for (let layer = 0; layer < texture.depthOrArrayLayers; ++layer) {
+              const bindGroup = device.createBindGroup({
+                layout: pipeline.getBindGroupLayout(0),
+                entries: [
+                  { binding: 0, resource: sampler },
+                  {
+                    binding: 1,
+                    resource: texture.createView({
+                      dimension: '2d',
+                      baseMipLevel,
+                      mipLevelCount: 1,
+                      baseArrayLayer: layer,
+                      arrayLayerCount: 1,
+                    }),
+                  },
+                ],
+              });
+    
+              const renderPassDescriptor = {
+                label: 'our basic canvas renderPass',
+                colorAttachments: [
+                  {
+                    view: texture.createView({
+                      dimension: '2d',
+                      baseMipLevel: baseMipLevel + 1,
+                      mipLevelCount: 1,
+                      baseArrayLayer: layer,
+                      arrayLayerCount: 1,
+                    }),
+                    loadOp: 'clear',
+                    storeOp: 'store',
+                  },
+                ],
+              };
+    
+              const pass = encoder.beginRenderPass(renderPassDescriptor);
+              pass.setPipeline(pipeline);
+              pass.setBindGroup(0, bindGroup);
+              pass.draw(6);  // call our vertex shader 6 times
+              pass.end();
+            }
+            ++baseMipLevel;
+          }
+    
+          const commandBuffer = encoder.finish();
+          device.queue.submit([commandBuffer]);
+        };
+      })();
+
+      async function loadImageBitmap(url) {
+        const res = await fetch(url);
+        const blob = await res.blob();
+        return await createImageBitmap(blob, { colorSpaceConversion: 'none' });
+      }
+    
+      async function createTextureFromImages(device, urls, options) {
+        const images = await Promise.all(urls.map(loadImageBitmap));
+        return createTextureFromSources(device, images, options);
+      }
+
+    async function changeBackground(backgroundString) {
+        let texture = await createTextureFromImages(
+            device,
+            [
+              // 'https://webgpufundamentals.org/webgpu/resources/images/leadenhall_market/pos-x.jpg',
+              // 'https://webgpufundamentals.org/webgpu/resources/images/leadenhall_market/neg-x.jpg',  
+              // 'https://webgpufundamentals.org/webgpu/resources/images/leadenhall_market/pos-y.jpg',  
+              // 'https://webgpufundamentals.org/webgpu/resources/images/leadenhall_market/neg-y.jpg',  
+              // 'https://webgpufundamentals.org/webgpu/resources/images/leadenhall_market/pos-z.jpg',  
+              // 'https://webgpufundamentals.org/webgpu/resources/images/leadenhall_market/neg-z.jpg',  
+              `./${backgroundString}/px.png`,  
+              `./${backgroundString}/nx.png`,  
+              `./${backgroundString}/py.png`,  
+              `./${backgroundString}/ny.png`,  
+              `./${backgroundString}/pz.png`,  
+              `./${backgroundString}/nz.png`,  
+            ],
+            {mips: true, flipY: false},
+        );
+        const skyBoxBindGroup = device.createBindGroup({
+          label: 'bind group for object',
+          layout: skyBoxPipeline.getBindGroupLayout(0),
+          entries: [
+            { binding: 0, resource: { buffer: skyBoxUniformBuffer }},
+            { binding: 1, resource: sampler2 },
+            { binding: 2, resource: texture.createView({dimension: 'cube'}) },
+          ],
+        });
+
+        return {texture, skyBoxBindGroup};
     }
+    
+    const sampler2 = device.createSampler({
+      magFilter: 'linear',
+      minFilter: 'linear',
+      mipmapFilter: 'linear',
+    });
+  
+    // viewDirectionProjectionInverse
+    const skyBoxUniformBufferSize = (16) * 4;
+    const skyBoxUniformBuffer = device.createBuffer({
+      label: 'uniforms',
+      size: skyBoxUniformBufferSize,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+  
+    const skyBoxUniformValues = new Float32Array(skyBoxUniformBufferSize / 4);
+  
+    // offsets to the various uniform values in float32 indices
+    const kViewDirectionProjectionInverseOffset = 0;
+  
+    const viewDirectionProjectionInverseValue = skyBoxUniformValues.subarray(
+        kViewDirectionProjectionInverseOffset,
+        kViewDirectionProjectionInverseOffset + 16);
+    
+        // projection, view, world, cameraPosition, pad
+        const envMapUniformBufferSize = (16 + 16 + 16 + 3 + 1) * 4;
+      
+        const envMapUniformValues = new Float32Array(envMapUniformBufferSize / 4);
+      
+        // offsets to the various uniform values in float32 indices
+        const kProjectionOffset = 0;
+        const kViewOffset = 16;
+        const kCameraPositionOffset = 32;
+      
+        const projectionValue = envMapUniformValues.subarray(kProjectionOffset, kProjectionOffset + 16);
+        const viewValue2 = envMapUniformValues.subarray(kViewOffset, kViewOffset + 16);
+        const cameraPositionValue = envMapUniformValues.subarray(
+            kCameraPositionOffset, kCameraPositionOffset + 3);
+    
+      let { texture, skyBoxBindGroup } = await changeBackground(backgroundString);
+
+    
+
+
+
+
 
     async function render(now) {
         now *= 0.001;  // convert to seconds
@@ -138,6 +507,44 @@ async function main() {
         then = now;
 
         const startTime = performance.now();
+
+
+        let lastString = settings.getProterty('object');
+        let lastBackgroundString = settings.getProterty('background');
+
+        if(myString != lastString){
+            myString = lastString;
+            ({
+                obj, Base_Vertex, animationBase, limit,
+                levels,
+                connectivityStorageBuffers,
+                base_UVStorageBuffers,
+                extra_base_UVStorageBuffers,
+                extra_vertex_offsetStorageBuffers,
+                extra_vertex_indexesStorageBuffers,
+                textureBuffer,
+                indices,
+                texcoordDatas,
+                indexBuffers,
+                vertexBuffers,
+                Base_Vertex_Buffer,
+                Base_Normal_Buffer,
+                OrdinaryPointData,
+                textures,
+                videoSource,
+                sampler,
+                limit_Buffers,
+                Base_Vertex_After_Buffer,
+                OrdinaryBuffer,
+                pipeline_Face, pipeline_Edge, pipeline_Vertex, pipeline_webCam, pipelines, pipeline2, pipelineAnime, pipeline_Limit,
+                fixedBindGroups, animeBindGroup, changedBindGroups,
+                bindGroups,
+            } = await changeString(myString));
+        }
+        if(backgroundString != lastBackgroundString){
+            backgroundString = lastBackgroundString;
+            ({texture, skyBoxBindGroup} = await changeBackground(backgroundString));
+        }
 
         if (videoSource instanceof HTMLVideoElement) {
             // 실제 비디오에서 텍스처로 복사
@@ -203,6 +610,58 @@ async function main() {
         
         renderPassDescriptor.depthStencilAttachment.view = depthTexture.createView();
         renderPassDescriptor2.depthStencilAttachment.view = depthTexture.createView();
+
+
+
+
+
+
+
+
+
+
+        
+        
+            const aspect = canvas.clientWidth / canvas.clientHeight;
+            mat4.perspective(
+                60 * Math.PI / 180,
+                aspect,
+                0.1,      // zNear
+                10,      // zFar
+                projectionValue,
+            );
+            // Camera going in circle from origin looking at origin
+            cameraPositionValue.set([Math.cos(now * .1) * 5, 0, Math.sin(now * .1) * 5]);
+            const view = mat4.lookAt(
+              cameraPositionValue,
+              [0, 0, 0],  // target
+              [0, 1, 0],  // up
+            );
+            // Copy the view into the viewValue since we're going
+            // to zero out the view's translation
+            viewValue2.set(view);
+        
+            // We only care about direction so remove the translation
+            view[12] = 0;
+            view[13] = 0;
+            view[14] = 0;
+            const viewProjection = mat4.multiply(projectionValue, view);
+            mat4.inverse(viewProjection, viewDirectionProjectionInverseValue);
+        
+            // upload the uniform values to the uniform buffers
+            device.queue.writeBuffer(skyBoxUniformBuffer, 0, skyBoxUniformValues);
+
+
+
+
+
+
+
+
+
+
+
+
 
         const matrix = mat4.create();
         mat4.multiply(matrix, camera.getViewMatrix(), camera.getProjectionMatrix());
@@ -310,9 +769,15 @@ async function main() {
                 //                          0.377044, 0.457611(위)로 가정.                     0.40039025
                 //                                                                      오차: 0.000000395
                 // patch2 528+289=817(818), 0.395721, 0.447632(위)    0.414398, 0.437653(아래) 0.40039025
-                pass.drawIndexed(narray[i] * narray[i] * 6,  j * 2 * 1000 + 100000);
+                pass.drawIndexed(narray[i] * narray[i] * 6,  levels[i].size/4);
             }
         }
+        
+        // Draw the skyBox
+        pass.setPipeline(skyBoxPipeline);
+        pass.setBindGroup(0, skyBoxBindGroup);
+        pass.draw(3);
+
         pass.end();
         commandBuffer = encoder.finish();
         device.queue.submit([commandBuffer]);
@@ -327,12 +792,13 @@ async function main() {
         //     make_render_encoder(device, renderPassDescriptor, pipelines[pipelineValue], changedBindGroups[i+(depth+1)*pipelineValue], vertexBuffers[N][i], indexBuffers[N][i], narray[i] * narray[i] * 6, 'render pipeline encoder');
         // }
 
-        const OrdinaryPointfixedBindGroup = await extraBindGroup(device, uniformBuffer, OrdinaryPointData, Base_Vertex_After_Buffer, Base_Normal_Buffer, textures, sampler, extra_base_UVStorageBuffers, extra_vertex_offsetStorageBuffers, pipeline2, depth, settings)
+        const OrdinaryPointfixedBindGroup = await extraBindGroup(device, uniformBuffer, OrdinaryPointData, Base_Vertex_After_Buffer, Base_Normal_Buffer, textures, sampler, extra_base_UVStorageBuffers, extra_vertex_offsetStorageBuffers, extra_vertex_indexesStorageBuffers, pipeline2, depth, settings)
 
         encoder = device.createCommandEncoder({ label : 'ordinary buffer encoder',});
         encoder.copyBufferToBuffer(Base_Vertex_Buffer, 0, OrdinaryBuffer, 0, Base_Vertex_Buffer.size);
 
-        make_render_encoder(device, renderPassDescriptor2, pipeline2, OrdinaryPointfixedBindGroup, OrdinaryBuffer, false, 6*10000, 65535, 'ordinary draw encoder');
+        make_render_encoder(device, renderPassDescriptor2, pipeline2, OrdinaryPointfixedBindGroup, OrdinaryBuffer, false, 6*OrdinaryPointData[settings.getProterty('ordinaryLevel')].length, 65535, 'ordinary draw encoder');
+
 
         if (canTimestamp) {
             encoder.resolveQuerySet(querySet, 0, querySet.count, resolveBuffer, 0);
@@ -433,13 +899,14 @@ function make_render_encoder(device, renderPassDescriptor, pipeline, bindgroup, 
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindgroup);
     pass.setVertexBuffer(0, vertexBuffer);
-    if(indexBuffer){
-        pass.setIndexBuffer(indexBuffer, 'uint32');
-        pass.drawIndexed(draw_size);// parameter가 2개여야 한다.
-    }
-    else {
+    // if(indexBuffer){
+    //     pass.setIndexBuffer(indexBuffer, 'uint32');
+    //     pass.drawIndexed(draw_size);// parameter가 2개여야 한다.
+    // }
+    // else {
         pass.draw(draw_size);
-    }
+        // pass.draw(6 * 15);
+    // }
     pass.end();
     const commandBuffer = encoder.finish();
     device.queue.submit([commandBuffer]);

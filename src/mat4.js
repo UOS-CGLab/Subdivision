@@ -417,8 +417,90 @@ export const mat4 = {
         out[15] = (a20 * b03 - a21 * b01 + a22 * b00) * det;
       
         return out;
+    },
+
+
+    lookAt(cameraPosition, target, up) {
+      const zAxis = normalize([
+        cameraPosition[0] - target[0],
+        cameraPosition[1] - target[1],
+        cameraPosition[2] - target[2],
+      ]); // 카메라 -> 타겟 방향의 반대 (z축)
+    
+      const xAxis = normalize(cross(up, zAxis)); // x축: up 벡터와 z축의 외적
+      const yAxis = cross(zAxis, xAxis); // y축: z축과 x축의 외적
+    
+      // 뷰 매트릭스 생성
+      return [
+        xAxis[0], xAxis[1], xAxis[2], -dot(xAxis, cameraPosition),
+        yAxis[0], yAxis[1], yAxis[2], -dot(yAxis, cameraPosition),
+        zAxis[0], zAxis[1], zAxis[2], -dot(zAxis, cameraPosition),
+        0,        0,        0,        1,
+      ];
+    },
+
+    inverse(m, dst) {
+      dst = dst || new Float32Array(16);
+    
+      const m00 = m[0 * 4 + 0], m01 = m[0 * 4 + 1], m02 = m[0 * 4 + 2], m03 = m[0 * 4 + 3];
+      const m10 = m[1 * 4 + 0], m11 = m[1 * 4 + 1], m12 = m[1 * 4 + 2], m13 = m[1 * 4 + 3];
+      const m20 = m[2 * 4 + 0], m21 = m[2 * 4 + 1], m22 = m[2 * 4 + 2], m23 = m[2 * 4 + 3];
+      const m30 = m[3 * 4 + 0], m31 = m[3 * 4 + 1], m32 = m[3 * 4 + 2], m33 = m[3 * 4 + 3];
+    
+      const t0  = m22 * m33 - m32 * m23;
+      const t1  = m21 * m33 - m31 * m23;
+      const t2  = m21 * m32 - m31 * m22;
+      const t3  = m20 * m33 - m30 * m23;
+      const t4  = m20 * m32 - m30 * m22;
+      const t5  = m20 * m31 - m30 * m21;
+    
+      const d = 1.0 / (m00 * (m11 * t0 - m12 * t1 + m13 * t2) -
+                       m01 * (m10 * t0 - m12 * t3 + m13 * t4) +
+                       m02 * (m10 * t1 - m11 * t3 + m13 * t5) -
+                       m03 * (m10 * t2 - m11 * t4 + m12 * t5));
+    
+      dst[0] = d *  (m11 * t0 - m12 * t1 + m13 * t2);
+      dst[1] = d * -(m01 * t0 - m02 * t1 + m03 * t2);
+      dst[2] = d *  (m01 * (m12 * m33 - m32 * m13) - m02 * (m11 * m33 - m31 * m13) + m03 * (m11 * m32 - m31 * m12));
+      dst[3] = d * -(m01 * (m12 * m23 - m22 * m13) - m02 * (m11 * m23 - m21 * m13) + m03 * (m11 * m22 - m21 * m12));
+    
+      dst[4] = d * -(m10 * t0 - m12 * t3 + m13 * t4);
+      dst[5] = d *  (m00 * t0 - m02 * t3 + m03 * t4);
+      dst[6] = d * -(m00 * (m12 * m33 - m32 * m13) - m02 * (m10 * m33 - m30 * m13) + m03 * (m10 * m32 - m30 * m12));
+      dst[7] = d *  (m00 * (m12 * m23 - m22 * m13) - m02 * (m10 * m23 - m20 * m13) + m03 * (m10 * m22 - m20 * m12));
+    
+      dst[8] = d *  (m10 * t1 - m11 * t3 + m13 * t5);
+      dst[9] = d * -(m00 * t1 - m01 * t3 + m03 * t5);
+      dst[10] = d *  (m00 * (m11 * m33 - m31 * m13) - m01 * (m10 * m33 - m30 * m13) + m03 * (m10 * m31 - m30 * m11));
+      dst[11] = d * -(m00 * (m11 * m23 - m21 * m13) - m01 * (m10 * m23 - m20 * m13) + m03 * (m10 * m21 - m20 * m11));
+    
+      dst[12] = d * -(m10 * t2 - m11 * t4 + m12 * t5);
+      dst[13] = d *  (m00 * t2 - m01 * t4 + m02 * t5);
+      dst[14] = d * -(m00 * (m11 * m32 - m31 * m12) - m01 * (m10 * m32 - m30 * m12) + m02 * (m10 * m31 - m30 * m11));
+      dst[15] = d *  (m00 * (m11 * m22 - m21 * m12) - m01 * (m10 * m22 - m20 * m12) + m02 * (m10 * m21 - m20 * m11));
+    
+      return dst;
     }
-
-
-      
 };
+
+
+    
+    // 벡터 정규화 함수
+    function normalize(v) {
+      const length = Math.sqrt(v[0] ** 2 + v[1] ** 2 + v[2] ** 2);
+      return [v[0] / length, v[1] / length, v[2] / length];
+    }
+    
+    // 벡터 외적 함수
+    function cross(a, b) {
+      return [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+      ];
+    }
+    
+    // 벡터 내적 함수
+    function dot(a, b) {
+      return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+    }
