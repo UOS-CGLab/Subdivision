@@ -583,7 +583,7 @@ export async function createPipelines(device, presentationFormat) {
             else if(uni.color.x == 4) { return_color = vec4f(vsOut.texcoord1.xxx*5-2.5, 1); }
             // else if(uni.color.x == 8) { return_color = getTexture(object_normal_texture, sampler0, vsOut.texcoord, 0); }
             // else if(uni.color.x == 8) { return_color = vec4f(0, 0.5, 0, 1.0); }
-            else if(uni.color.x == 8) { return_color = getTexture(webCam_texture, sampler0, vsOut.position2.yz, 0); }
+            // else if(uni.color.x == 8) { return_color = getTexture(webCam_texture, sampler0, vsOut.position2.yz, 0); }
             else { return_color = vec4f(vsOut.color); }
 
             let view = vsOut.view;
@@ -603,18 +603,20 @@ export async function createPipelines(device, presentationFormat) {
             {
                 return vec4f(0, 0, 0, 1);
             }
-            // if(vsOut.normal.z < 0.0) {discard;}
-            // var l:vec3f = normalize(vsOut.view.xyz);
-            // var n = vsOut.normal;
-            // var l_dot_n: f32 = max(dot(l, n), 0.0);
-            // var ambient: vec3f = vec3f(0.0, 0.05, 0.0);
-            // var diffuse: vec3f = vec3f(0.4, 0.5, 0.4) * l_dot_n;
-            // var specular: vec3f = vec3f(0, 0, 0);
-            // if(l_dot_n > 0)
-            // {
-            //     specular = vec3f(0.04,0.7,0.04) * pow(max(dot(l, n), 0), 2.5);
-            // }
-            // return_color = vec4f((ambient + diffuse + specular), 1.0);
+            if(uni.color.x == 8)
+            {
+                var l:vec3f = normalize(vsOut.view.xyz);
+                var n = normal;
+                var l_dot_n: f32 = max(dot(l, n), 0.0);
+                var ambient: vec3f = vec3f(0.0, 0.05, 0.0);
+                var diffuse: vec3f = vec3f(0.4, 0.5, 0.4) * l_dot_n;
+                var specular: vec3f = vec3f(0, 0, 0);
+                if(l_dot_n > 0)
+                {
+                    specular = vec3f(0.04,0.7,0.04) * pow(max(dot(l, n), 0), 2.5);
+                }
+                return_color = vec4f((ambient + diffuse + specular), 1.0);
+            }
             return return_color;
         }
         `,
@@ -752,7 +754,7 @@ export async function createPipelines(device, presentationFormat) {
             // else if(uni.color.x == 8) { return_color = getTexture(object_normal_texture, sampler0, vsOut.texcoord, 0); }
             // else if(uni.color.x == 8) { return_color = vec4f(0.753, 0.753, 0.753, 1.0); }
             // else if(uni.color.x == 8) { return_color = vec4f(0, 0.5, 0, 1.0); }
-            else if(uni.color.x == 8) { return_color = getTexture(webCam_texture, sampler0, vsOut.position2.yz, 0); }
+            // else if(uni.color.x == 8) { return_color = getTexture(webCam_texture, sampler0, vsOut.position2.yz, 0); }
             else { return_color = vec4f(vsOut.color); }
 
             let view = vsOut.view;
@@ -768,18 +770,21 @@ export async function createPipelines(device, presentationFormat) {
                     return_color += vec4f(highlight, 1);
                 }
             }
-            // if(vsOut.normal.z < 0.0) {discard;}
-            // var l:vec3f = normalize(vsOut.view.xyz);
-            // var n = vsOut.normal;
-            // var l_dot_n: f32 = max(dot(l, n), 0.0);
-            // var ambient: vec3f = vec3f(0.0, 0.05, 0.0);
-            // var diffuse: vec3f = vec3f(0.4, 0.5, 0.4) * l_dot_n;
-            // var specular: vec3f = vec3f(0, 0, 0);
-            // if(l_dot_n > 0)
-            // {
-            //     specular = vec3f(0.04,0.7,0.04) * pow(max(dot(l, n), 0), 2.5);
-            // }
-            // return_color = vec4f((ambient + diffuse + specular), 1.0);
+            
+            if((uni.color.x == 8))
+            {
+                var l:vec3f = normalize(vsOut.view.xyz);
+                var n = normal;
+                var l_dot_n: f32 = max(dot(l, n), 0.0);
+                var ambient: vec3f = vec3f(0.0, 0.05, 0.0);
+                var diffuse: vec3f = vec3f(0.4, 0.5, 0.4) * l_dot_n;
+                var specular: vec3f = vec3f(0, 0, 0);
+                if(l_dot_n > 0)
+                {
+                    specular = vec3f(0.04,0.7,0.04) * pow(max(dot(l, n), 0), 2.5);
+                }
+                return_color = vec4f((ambient + diffuse + specular), 1.0);
+            }
             return return_color;
         }
         `,

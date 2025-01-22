@@ -16,9 +16,10 @@ let depth = 6;
 async function main() {
     let { canvas, device, context, presentationFormat, canTimestamp } = await initializeWebGPU();
     const camera = new Camera();
+    const skyboxCamera = new Camera();
     let keyValue = 1;
     canvas, keyValue = mouse_move(canvas, camera);
-    addkeyboardEvent(camera)
+    addkeyboardEvent(camera);
 
     let { settings, lightPosition } = initializeScene(camera);
 
@@ -427,12 +428,6 @@ async function main() {
         let texture = await createTextureFromImages(
             device,
             [
-              // 'https://webgpufundamentals.org/webgpu/resources/images/leadenhall_market/pos-x.jpg',
-              // 'https://webgpufundamentals.org/webgpu/resources/images/leadenhall_market/neg-x.jpg',  
-              // 'https://webgpufundamentals.org/webgpu/resources/images/leadenhall_market/pos-y.jpg',  
-              // 'https://webgpufundamentals.org/webgpu/resources/images/leadenhall_market/neg-y.jpg',  
-              // 'https://webgpufundamentals.org/webgpu/resources/images/leadenhall_market/pos-z.jpg',  
-              // 'https://webgpufundamentals.org/webgpu/resources/images/leadenhall_market/neg-z.jpg',  
               `./${backgroundString}/px.png`,  
               `./${backgroundString}/nx.png`,  
               `./${backgroundString}/py.png`,  
@@ -507,8 +502,7 @@ async function main() {
         then = now;
 
         const startTime = performance.now();
-
-
+        
         let lastString = settings.getProterty('object');
         let lastBackgroundString = settings.getProterty('background');
 
@@ -611,63 +605,65 @@ async function main() {
         renderPassDescriptor.depthStencilAttachment.view = depthTexture.createView();
         renderPassDescriptor2.depthStencilAttachment.view = depthTexture.createView();
 
-
-
-
-
-
-
-
-
-
-        
-        
-            const aspect = canvas.clientWidth / canvas.clientHeight;
-            mat4.perspective(
-                60 * Math.PI / 180,
-                aspect,
-                0.1,      // zNear
-                10,      // zFar
-                projectionValue,
-            );
-            // Camera going in circle from origin looking at origin
-            cameraPositionValue.set([Math.cos(now * .1) * 5, 0, Math.sin(now * .1) * 5]);
-            const view = mat4.lookAt(
-              cameraPositionValue,
-              [0, 0, 0],  // target
-              [0, 1, 0],  // up
-            );
-            // Copy the view into the viewValue since we're going
-            // to zero out the view's translation
-            viewValue2.set(view);
-        
-            // We only care about direction so remove the translation
-            view[12] = 0;
-            view[13] = 0;
-            view[14] = 0;
-            const viewProjection = mat4.multiply(projectionValue, view);
-            mat4.inverse(viewProjection, viewDirectionProjectionInverseValue);
-        
-            // upload the uniform values to the uniform buffers
-            device.queue.writeBuffer(skyBoxUniformBuffer, 0, skyBoxUniformValues);
-
-
-
-
-
-
-
-
-
-
-
-
-
         const matrix = mat4.create();
         mat4.multiply(matrix, camera.getViewMatrix(), camera.getProjectionMatrix());
 
         camera.update();
         mat4.multiply(camera.getProjectionMatrix(), camera.getViewMatrix(), matrixValue);
+
+
+
+
+
+
+
+
+
+
+
+
+        
+        const aspect = canvas.clientWidth / canvas.clientHeight;
+        mat4.perspective(
+            60 * Math.PI / 180,
+            aspect,
+            0.1,      // zNear
+            10,      // zFar
+            projectionValue,
+        );
+        // Camera going in circle from origin looking at origin
+        cameraPositionValue.set([Math.cos(now * 0.02) * 5, Math.sin(now * 0.04) * 3, Math.sin(now * 0.02) * 5]);
+        const view = mat4.lookAt(
+          cameraPositionValue,
+          [0, 0, 0],  // target
+          [0, 1, 0],  // up
+        );
+        // Copy the view into the viewValue since we're going
+        // to zero out the view's translation
+        viewValue2.set(view);
+    
+        // We only care about direction so remove the translation
+        view[12] = 0;
+        view[13] = 0;
+        view[14] = 0;
+        const viewProjection = mat4.multiply(projectionValue, view);
+        mat4.inverse(viewProjection, viewDirectionProjectionInverseValue);
+    
+        // upload the uniform values to the uniform buffers
+        device.queue.writeBuffer(skyBoxUniformBuffer, 0, skyBoxUniformValues);
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         keyValue = settings.getProterty('moveSpeed');
         if(lightPosition.getProterty('lightIsView') == true)
@@ -694,7 +690,7 @@ async function main() {
             case 'normal': { colorValue[0] = 1; break; }
             case 'level': { colorValue[0] = 2; break; }
             case 'displacement_texture': { colorValue[0] = 4; break; }
-            case 'webCam_texture': { colorValue[0] = 8; break; }
+            case 'green_rubber': { colorValue[0] = 8; break; }
         }
         if(lightPosition.getProterty('lightActive') == true)
             colorValue[1] = 1;

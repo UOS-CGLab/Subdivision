@@ -19,9 +19,9 @@ export class Settings {
 
     addGui(gui) {
         gui.add(this.settings, 'object', ['monsterfrog', 'ninja_head', 'sphere']).name('object')
-        gui.add(this.settings, 'background', ['space', 'laboratory']).name('background')
+        gui.add(this.settings, 'background', ['space', 'laboratory', 'leadenhall_market']).name('background')
         gui.add(this.settings, 'pipelineSetting', ['V', 'L', 'F']).name('Pipeline V or L or F')// .onChange((name, value) => this.onRadioChange('pipelineSetting', value));
-        gui.add(this.settings, 'color', ['position', 'normal', 'level', 'displacement_texture', 'webCam_texture']).name('Color')// .onChange((name, value) => this.onRadioChange('pipelineSetting', value));
+        gui.add(this.settings, 'color', ['position', 'normal', 'level', 'displacement_texture', 'green_rubber']).name('Color')// .onChange((name, value) => this.onRadioChange('pipelineSetting', value));
         gui.add(this.settings, 'tesselation', 0, 6, 1).name('tesselation').step(1)// .onChange((name, value) => this.onSliderChange('tesselation', value));
         gui.add(this.settings, 'ordinaryLevel', 0, 6, 1).name('ordinaryLevel').step(1)// .onChange((name, value) => this.onSliderChange('ordinaryLevel', value));
 
